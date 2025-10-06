@@ -75,6 +75,7 @@ export default function BillDetailPage() {
   const queryClient = useQueryClient()
   const [newComment, setNewComment] = useState('')
   const [isSubmittingComment, setIsSubmittingComment] = useState(false)
+  const [expandedAttachments, setExpandedAttachments] = useState<Set<number>>(new Set())
 
   // Pobierz szczegóły projektu ustawy
   const { data: bill, isLoading: billLoading } = useQuery<Bill>(
@@ -398,6 +399,25 @@ export default function BillDetailPage() {
             )}
           </div>
 
+          {/* Pełny tekst projektu */}
+          {bill.full_text && (
+            <div className="card p-6 mb-8">
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
+                <DocumentTextIcon className="h-5 w-5 inline mr-2" />
+                Pełny tekst projektu
+              </h2>
+              <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                <div className="text-sm text-blue-800 dark:text-blue-300 max-h-96 overflow-y-auto">
+                  <div className="prose prose-sm max-w-none dark:prose-invert">
+                    <div className="whitespace-pre-line leading-relaxed font-mono text-xs bg-white dark:bg-gray-900 p-4 rounded border">
+                      {formatLegalText(bill.full_text)}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Załączniki */}
           {bill.attachment_files && bill.attachment_files.length > 0 && (
             <div className="card p-6 mb-8">
@@ -432,40 +452,42 @@ export default function BillDetailPage() {
                       </a>
                     </div>
                     
-                    {/* Zawartość pliku */}
+                    {/* Zawartość pliku - wyświetlana po kliknięciu */}
                     {file.content && (
-                      <div className="mt-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                        <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-2">
-                          Podgląd treści:
-                        </h4>
-                        <div className="text-sm text-gray-700 dark:text-gray-300 max-h-40 overflow-y-auto">
-                          <div className="prose prose-sm max-w-none dark:prose-invert">
-                            <div className="whitespace-pre-line leading-relaxed font-mono text-xs bg-white dark:bg-gray-900 p-3 rounded border">
-                              {formatLegalText(file.content)}...
+                      <div className="mt-3">
+                        <button
+                          onClick={() => {
+                            const newExpanded = new Set(expandedAttachments)
+                            if (newExpanded.has(index)) {
+                              newExpanded.delete(index)
+                            } else {
+                              newExpanded.add(index)
+                            }
+                            setExpandedAttachments(newExpanded)
+                          }}
+                          className="text-sm text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300 font-medium"
+                        >
+                          {expandedAttachments.has(index) ? 'Ukryj treść' : 'Pokaż treść'}
+                        </button>
+                        {expandedAttachments.has(index) && (
+                          <div className="mt-2 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                            <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-2">
+                              Podgląd treści:
+                            </h4>
+                            <div className="text-sm text-gray-700 dark:text-gray-300 max-h-40 overflow-y-auto">
+                              <div className="prose prose-sm max-w-none dark:prose-invert">
+                                <div className="whitespace-pre-line leading-relaxed font-mono text-xs bg-white dark:bg-gray-900 p-3 rounded border">
+                                  {formatLegalText(file.content)}...
+                                </div>
+                              </div>
                             </div>
                           </div>
-                        </div>
+                        )}
                       </div>
                     )}
                   </div>
                 ))}
               </div>
-              
-              {bill.full_text && (
-                <div className="mt-4 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
-                  <h3 className="text-sm font-medium text-blue-900 dark:text-blue-200 mb-2">
-                    <DocumentTextIcon className="h-4 w-4 inline mr-1" />
-                    Pełny tekst projektu
-                  </h3>
-                  <div className="text-sm text-blue-800 dark:text-blue-300 max-h-96 overflow-y-auto">
-                    <div className="prose prose-sm max-w-none dark:prose-invert">
-                      <div className="whitespace-pre-line leading-relaxed font-mono text-xs bg-white dark:bg-gray-900 p-4 rounded border">
-                        {formatLegalText(bill.full_text)}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
             </div>
           )}
 
