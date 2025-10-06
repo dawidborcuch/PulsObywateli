@@ -245,6 +245,43 @@ export default function BillDetailPage() {
     return <DocumentIcon className="h-5 w-5 text-gray-600" />
   }
 
+  const formatLegalText = (text: string) => {
+    if (!text) return ''
+    
+    // Podstawowe formatowanie tekstu prawnego
+    return text
+      // Zachowaj podziały linii
+      .replace(/\n/g, '\n')
+      // Dodaj wcięcia dla artykułów
+      .replace(/^Art\./gm, '    Art.')
+      .replace(/^§/gm, '    §')
+      .replace(/^Ust\./gm, '    Ust.')
+      .replace(/^Pkt\./gm, '    Pkt.')
+      // Formatuj nagłówki
+      .replace(/^([A-ZĄĆĘŁŃÓŚŹŻ][a-ząćęłńóśźż\s]+)$/gm, '\n**$1**\n')
+      // Formatuj daty
+      .replace(/(\d{1,2}\s+\w+\s+\d{4})/g, '**$1**')
+      // Formatuj numery
+      .replace(/(\d+\.)/g, '**$1**')
+      // Dodaj wcięcia dla podpunktów
+      .replace(/^(\s*)([a-z]\))/gm, '$1    $2')
+      .replace(/^(\s*)(\d\))/gm, '$1    $2')
+      // Formatuj tytuły ustaw
+      .replace(/^([A-ZĄĆĘŁŃÓŚŹŻ][^.\n]+ustaw[^.\n]*)/gm, '\n**$1**\n')
+      // Formatuj daty w nawiasach
+      .replace(/\((\d{1,2}\s+\w+\s+\d{4})\)/g, '($1)')
+      // Dodaj wcięcia dla definicji
+      .replace(/^(\s*)([0-9]+[a-z]?\))/gm, '$1    $2')
+      // Formatuj nagłówki sekcji
+      .replace(/^([A-ZĄĆĘŁŃÓŚŹŻ][^.\n]+rozdział[^.\n]*)/gm, '\n**$1**\n')
+      .replace(/^([A-ZĄĆĘŁŃÓŚŹŻ][^.\n]+dział[^.\n]*)/gm, '\n**$1**\n')
+      // Formatuj definicje
+      .replace(/^(\s*)([0-9]+[a-z]?\))/gm, '$1    $2')
+      // Formatuj podpunkty
+      .replace(/^(\s*)([a-z]\))/gm, '$1    $2')
+      .replace(/^(\s*)(\d\))/gm, '$1    $2')
+  }
+
   if (billLoading) {
     return (
       <Layout>
@@ -402,7 +439,11 @@ export default function BillDetailPage() {
                           Podgląd treści:
                         </h4>
                         <div className="text-sm text-gray-700 dark:text-gray-300 max-h-40 overflow-y-auto">
-                          <pre className="whitespace-pre-wrap font-sans">{file.content}...</pre>
+                          <div className="prose prose-sm max-w-none dark:prose-invert">
+                            <div className="whitespace-pre-line leading-relaxed font-mono text-xs bg-white dark:bg-gray-900 p-3 rounded border">
+                              {formatLegalText(file.content)}...
+                            </div>
+                          </div>
                         </div>
                       </div>
                     )}
@@ -417,7 +458,11 @@ export default function BillDetailPage() {
                     Pełny tekst projektu
                   </h3>
                   <div className="text-sm text-blue-800 dark:text-blue-300 max-h-96 overflow-y-auto">
-                    <pre className="whitespace-pre-wrap font-sans">{bill.full_text}</pre>
+                    <div className="prose prose-sm max-w-none dark:prose-invert">
+                      <div className="whitespace-pre-line leading-relaxed font-mono text-xs bg-white dark:bg-gray-900 p-4 rounded border">
+                        {formatLegalText(bill.full_text)}
+                      </div>
+                    </div>
                   </div>
                 </div>
               )}
