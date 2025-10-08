@@ -6,7 +6,7 @@ import { useQuery } from 'react-query'
 import api from '@/lib/api'
 import { format } from 'date-fns'
 import { pl } from 'date-fns/locale'
-import { MagnifyingGlassIcon, FunnelIcon } from '@heroicons/react/24/outline'
+import { MagnifyingGlassIcon, FunnelIcon, ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/outline'
 
 interface Bill {
   id: number
@@ -34,25 +34,30 @@ export default function BillsPage() {
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
   const [sortBy, setSortBy] = useState('-submission_date')
+  const [currentPage, setCurrentPage] = useState(1)
 
-  const { data: bills, isLoading, error } = useQuery<Bill[]>(
-    ['bills', searchTerm, statusFilter, sortBy],
+  const { data: billsData, isLoading, error } = useQuery(
+    ['bills', searchTerm, statusFilter, sortBy, currentPage],
     async () => {
       try {
         const params = new URLSearchParams()
         if (searchTerm) params.append('search', searchTerm)
         if (statusFilter) params.append('status', statusFilter)
         if (sortBy) params.append('ordering', sortBy)
+        params.append('page', currentPage.toString())
         
         const response = await api.get(`/bills/?${params.toString()}`)
         console.log('API Response:', response.data) // Debug log
-        return response.data.results || response.data || []
+        return response.data
       } catch (error) {
         console.error('API Error:', error)
         throw error
       }
     }
   )
+
+  const bills = billsData?.results || billsData || []
+  const pagination = billsData?.pagination || null
 
   const getStatusColor = (status: string) => {
     const statusColors: { [key: string]: string } = {
@@ -235,6 +240,56 @@ export default function BillsPage() {
               <p className="text-gray-500 dark:text-gray-400">
                 Brak projektów ustaw spełniających kryteria wyszukiwania
               </p>
+            </div>
+          )}
+
+          {/* Paginacja */}
+          {pagination && pagination.count > pagination.page_size && (
+            <div className="mt-8 flex items-center justify-between">
+              <div className="text-sm text-gray-700 dark:text-gray-300">
+                Wyświetlane {((currentPage - 1) * pagination.page_size) + 1}-{Math.min(currentPage * pagination.page_size, pagination.count)} z {pagination.count} projektów
+              </div>
+              
+              <div className="flex items-center space-x-2">
+                <button
+                  onClick={() => setCurrentPage(currentPage - 1)}
+                  disabled={!pagination.previous}
+                  className="flex items-center px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed dark:bg-gray-800 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
+                >
+                  <ChevronLeftIcon className="w-4 h-4 mr-1" />
+                  Poprzednia
+                </button>
+                
+                <div className="flex items-center space-x-1">
+                  {Array.from({ length: Math.min(5, pagination.num_pages) }, (_, i) => {
+                    const pageNum = Math.max(1, currentPage - 2) + i
+                    if (pageNum > pagination.num_pages) return null
+                    
+                    return (
+                      <button
+                        key={pageNum}
+                        onClick={() => setCurrentPage(pageNum)}
+                        className={`px-3 py-2 text-sm font-medium rounded-md ${
+                          pageNum === currentPage
+                            ? 'bg-primary-600 text-white'
+                            : 'text-gray-500 bg-white border border-gray-300 hover:bg-gray-50 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700'
+                        }`}
+                      >
+                        {pageNum}
+                      </button>
+                    )
+                  })}
+                </div>
+                
+                <button
+                  onClick={() => setCurrentPage(currentPage + 1)}
+                  disabled={!pagination.next}
+                  className="flex items-center px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed dark:bg-gray-800 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
+                >
+                  Następna
+                  <ChevronRightIcon className="w-4 h-4 ml-1" />
+                </button>
+              </div>
             </div>
           )}
         </div>
