@@ -70,6 +70,18 @@ export default function BillsPage() {
       'passed': 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
       'rejected': 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
       'withdrawn': 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200',
+      'I czytanie': 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
+      'II czytanie': 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200',
+      'III czytanie': 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200',
+      'Senat': 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200',
+      'Sprawozdanie': 'bg-cyan-100 text-cyan-800 dark:bg-cyan-900 dark:text-cyan-200',
+      'Nominacja': 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200',
+      'Opinia': 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200',
+      'W trakcie': 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200',
+      'Wpłynął do Sejmu': 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
+      'Skierowano do I czytania': 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200',
+      'Praca w komisjach': 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
+      'Uchwalono': 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
     }
     return statusColors[status] || 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200'
   }
@@ -85,6 +97,18 @@ export default function BillsPage() {
       'passed': 'Przyjęty',
       'rejected': 'Odrzucony',
       'withdrawn': 'Wycofany',
+      'I czytanie': 'I czytanie',
+      'II czytanie': 'II czytanie',
+      'III czytanie': 'III czytanie',
+      'Senat': 'Senat',
+      'Sprawozdanie': 'Sprawozdanie',
+      'Nominacja': 'Nominacja',
+      'Opinia': 'Opinia',
+      'W trakcie': 'W trakcie',
+      'Wpłynął do Sejmu': 'Wpłynął do Sejmu',
+      'Skierowano do I czytania': 'Skierowano do I czytania',
+      'Praca w komisjach': 'Praca w komisjach',
+      'Uchwalono': 'Uchwalono',
     }
     return statusTexts[status] || status
   }
@@ -146,13 +170,18 @@ export default function BillsPage() {
                   className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
                 >
                   <option value="">Wszystkie statusy</option>
-                  <option value="submitted">Złożony</option>
-                  <option value="in_committee">W komisji</option>
-                  <option value="first_reading">Pierwsze czytanie</option>
-                  <option value="second_reading">Drugie czytanie</option>
-                  <option value="third_reading">Trzecie czytanie</option>
-                  <option value="passed">Przyjęty</option>
-                  <option value="rejected">Odrzucony</option>
+                  <option value="Wpłynął do Sejmu">Wpłynął do Sejmu</option>
+                  <option value="Skierowano do I czytania">Skierowano do I czytania</option>
+                  <option value="I czytanie">I czytanie</option>
+                  <option value="Praca w komisjach">Praca w komisjach</option>
+                  <option value="II czytanie">II czytanie</option>
+                  <option value="III czytanie">III czytanie</option>
+                  <option value="Senat">Senat</option>
+                  <option value="Uchwalono">Uchwalono</option>
+                  <option value="Sprawozdanie">Sprawozdanie</option>
+                  <option value="Nominacja">Nominacja</option>
+                  <option value="Opinia">Opinia</option>
+                  <option value="W trakcie">W trakcie</option>
                 </select>
               </div>
               

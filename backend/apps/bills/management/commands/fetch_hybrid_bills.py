@@ -348,6 +348,21 @@ class Command(BaseCommand):
             
             details = response.json()
             
+            # Pobierz etapy z procesu jeśli dostępny
+            process_prints = details.get('processPrint', [])
+            if process_prints:
+                try:
+                    process_id = process_prints[0]
+                    process_url = f"https://api.sejm.gov.pl/sejm/term{term}/processes/{process_id}"
+                    process_response = requests.get(process_url, timeout=30)
+                    if process_response.status_code == 200:
+                        process_data = process_response.json()
+                        details['stages'] = process_data.get('stages', [])
+                        self.stdout.write(f'Pobrano {len(details["stages"])} etapów dla procesu {process_id}')
+                except Exception as e:
+                    self.stdout.write(f'Błąd pobierania etapów dla procesu {process_prints[0]}: {str(e)}')
+                    details['stages'] = []
+            
             # Określ typ projektu na podstawie tytułu
             title = details.get('title', '')
             project_type = self.determine_project_type(title)
@@ -500,32 +515,40 @@ class Command(BaseCommand):
     def determine_sejm_status(self, details):
         """Określa status projektu na podstawie etapów z API Sejmu"""
         stages = details.get('stages', [])
+        
         if not stages:
-            # Dla druków bez etapów, sprawdź czy jest uchwalony
-            if details.get('passed', False):
-                return 'Uchwalono'
+            # Fallback na podstawie tytułu
+            title = details.get('title', '').lower()
+            if 'sprawozdanie' in title:
+                return 'Sprawozdanie'
+            elif 'lista kandydatów' in title:
+                return 'Nominacja'
+            elif 'opinia' in title:
+                return 'Opinia'
             else:
                 return 'W trakcie'
         
+        # Pobierz ostatni etap
         last_stage = stages[-1]
         stage_name = last_stage.get('stageName', '')
         
-        status_mapping = {
+        # Mapowanie etapów z API na statusy
+        stage_mapping = {
             'Projekt wpłynął do Sejmu': 'Wpłynął do Sejmu',
-            'Skierowano do I czytania na posiedzeniu Sejmu': 'I czytanie',
-            'Skierowano do I czytania w komisjach': 'I czytanie w komisjach',
+            'Skierowano do I czytania na posiedzeniu Sejmu': 'Skierowano do I czytania',
+            'Skierowano do I czytania w komisjach': 'Skierowano do I czytania',
             'I czytanie na posiedzeniu Sejmu': 'I czytanie',
+            'I czytanie w komisjach': 'I czytanie',
+            'Praca w komisjach po I czytaniu': 'Praca w komisjach',
             'II czytanie na posiedzeniu Sejmu': 'II czytanie',
+            'Praca w komisjach po II czytaniu': 'Praca w komisjach',
             'III czytanie na posiedzeniu Sejmu': 'III czytanie',
-            'Ustawę przekazano Prezydentowi do podpisu': 'Przekazano Prezydentowi',
-            'Ustawa została opublikowana': 'Opublikowana',
+            'Stanowisko Senatu': 'Senat',
+            'Praca w komisjach nad stanowiskiem Senatu': 'Praca w komisjach',
+            'Uchwalono': 'Uchwalono',
         }
         
-        for key, value in status_mapping.items():
-            if key in stage_name:
-                return value
-        
-        return stage_name if stage_name else 'W trakcie'
+        return stage_mapping.get(stage_name, stage_name if stage_name else 'W trakcie')
 
     def parse_sejm_date(self, date_string):
         """Parsuje datę z API Sejmu"""
