@@ -216,9 +216,6 @@ export default function BillsPage() {
                 <div key={bill.id} className="card p-6 hover:shadow-md transition-shadow duration-200">
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex flex-col gap-1">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(bill.status)}`}>
-                        {getStatusText(bill.status)}
-                      </span>
                       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getProjectTypeColor(bill.project_type)}`}>
                         {getProjectTypeText(bill.project_type)}
                       </span>
@@ -226,6 +223,31 @@ export default function BillsPage() {
                     <span className="text-sm text-gray-500 dark:text-gray-400">
                       {bill.number}
                     </span>
+                  </div>
+                  
+                  {/* Pasek postępu legislacyjnego */}
+                  <div className="mb-4">
+                    <div className="flex items-center justify-between text-xs text-gray-600 dark:text-gray-400 mb-2">
+                      <span>Etap legislacyjny</span>
+                      <span className="font-medium">{getStatusText(bill.status)}</span>
+                    </div>
+                    <div className="relative">
+                      <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                        <div 
+                          className={`h-2 rounded-full transition-all duration-500 ${getLegislativeProgressColor(bill.status)}`}
+                          style={{ width: `${getLegislativeProgress(bill.status)}%` }}
+                        ></div>
+                      </div>
+                      {/* Etapy legislacyjne */}
+                      <div className="flex justify-between mt-2 text-xs text-gray-500 dark:text-gray-400">
+                        <span className={getStageActiveClass(bill.status, 'Wpłynął do Sejmu')}>Wpłynął</span>
+                        <span className={getStageActiveClass(bill.status, 'I czytanie')}>I czytanie</span>
+                        <span className={getStageActiveClass(bill.status, 'II czytanie')}>II czytanie</span>
+                        <span className={getStageActiveClass(bill.status, 'III czytanie')}>III czytanie</span>
+                        <span className={getStageActiveClass(bill.status, 'Senat')}>Senat</span>
+                        <span className={getStageActiveClass(bill.status, 'Uchwalono')}>Uchwalono</span>
+                      </div>
+                    </div>
                   </div>
                   
                   <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2 line-clamp-2">
@@ -350,4 +372,52 @@ function getProjectTypeColor(projectType: string): string {
     'unknown': 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200'
   }
   return colorMap[projectType] || 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200'
+}
+
+// Funkcje pomocnicze dla paska postępu legislacyjnego
+function getLegislativeProgress(status: string): number {
+  const progressMap: { [key: string]: number } = {
+    'Wpłynął do Sejmu': 10,
+    'Skierowano do I czytania': 20,
+    'I czytanie': 30,
+    'Praca w komisjach': 40,
+    'II czytanie': 60,
+    'III czytanie': 80,
+    'Senat': 90,
+    'Uchwalono': 100,
+    'Sprawozdanie': 25,
+    'Nominacja': 15,
+    'Opinia': 20,
+    'W trakcie': 50,
+  }
+  return progressMap[status] || 0
+}
+
+function getLegislativeProgressColor(status: string): string {
+  const colorMap: { [key: string]: string } = {
+    'Wpłynął do Sejmu': 'bg-blue-500',
+    'Skierowano do I czytania': 'bg-indigo-500',
+    'I czytanie': 'bg-purple-500',
+    'Praca w komisjach': 'bg-yellow-500',
+    'II czytanie': 'bg-orange-500',
+    'III czytanie': 'bg-pink-500',
+    'Senat': 'bg-red-500',
+    'Uchwalono': 'bg-green-500',
+    'Sprawozdanie': 'bg-cyan-500',
+    'Nominacja': 'bg-emerald-500',
+    'Opinia': 'bg-amber-500',
+    'W trakcie': 'bg-gray-500',
+  }
+  return colorMap[status] || 'bg-gray-500'
+}
+
+function getStageActiveClass(currentStatus: string, stageStatus: string): string {
+  const stageOrder = ['Wpłynął do Sejmu', 'I czytanie', 'II czytanie', 'III czytanie', 'Senat', 'Uchwalono']
+  const currentIndex = stageOrder.indexOf(currentStatus)
+  const stageIndex = stageOrder.indexOf(stageStatus)
+  
+  if (currentIndex >= stageIndex) {
+    return 'text-primary-600 dark:text-primary-400 font-medium'
+  }
+  return 'text-gray-400 dark:text-gray-500'
 }

@@ -227,6 +227,54 @@ export default function BillDetailPage() {
     return colorMap[projectType] || 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200'
   }
 
+  // Funkcje pomocnicze dla paska postępu legislacyjnego
+  const getLegislativeProgress = (status: string): number => {
+    const progressMap: { [key: string]: number } = {
+      'Wpłynął do Sejmu': 10,
+      'Skierowano do I czytania': 20,
+      'I czytanie': 30,
+      'Praca w komisjach': 40,
+      'II czytanie': 60,
+      'III czytanie': 80,
+      'Senat': 90,
+      'Uchwalono': 100,
+      'Sprawozdanie': 25,
+      'Nominacja': 15,
+      'Opinia': 20,
+      'W trakcie': 50,
+    }
+    return progressMap[status] || 0
+  }
+
+  const getLegislativeProgressColor = (status: string): string => {
+    const colorMap: { [key: string]: string } = {
+      'Wpłynął do Sejmu': 'bg-blue-500',
+      'Skierowano do I czytania': 'bg-indigo-500',
+      'I czytanie': 'bg-purple-500',
+      'Praca w komisjach': 'bg-yellow-500',
+      'II czytanie': 'bg-orange-500',
+      'III czytanie': 'bg-pink-500',
+      'Senat': 'bg-red-500',
+      'Uchwalono': 'bg-green-500',
+      'Sprawozdanie': 'bg-cyan-500',
+      'Nominacja': 'bg-emerald-500',
+      'Opinia': 'bg-amber-500',
+      'W trakcie': 'bg-gray-500',
+    }
+    return colorMap[status] || 'bg-gray-500'
+  }
+
+  const getStageActiveClass = (currentStatus: string, stageStatus: string): string => {
+    const stageOrder = ['Wpłynął do Sejmu', 'I czytanie', 'II czytanie', 'III czytanie', 'Senat', 'Uchwalono']
+    const currentIndex = stageOrder.indexOf(currentStatus)
+    const stageIndex = stageOrder.indexOf(stageStatus)
+    
+    if (currentIndex >= stageIndex) {
+      return 'text-primary-600 dark:text-primary-400 font-medium'
+    }
+    return 'text-gray-400 dark:text-gray-500'
+  }
+
   const getAttachmentUrl = (attachment: string, sejmId: string) => {
     // Generuj URL do załącznika na podstawie nazwy pliku
     if (attachment.endsWith('.pdf')) {
@@ -344,15 +392,37 @@ export default function BillDetailPage() {
             </div>
 
             <div className="flex items-center space-x-3 mb-4">
-              <span className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(bill.status)}`}>
-                {getStatusText(bill.status)}
-              </span>
               <span className={`px-3 py-1 rounded-full text-sm font-medium ${getProjectTypeColor(bill.project_type)}`}>
                 {getProjectTypeText(bill.project_type)}
               </span>
               <span className="text-sm text-gray-500 dark:text-gray-400">
                 {bill.number}
               </span>
+            </div>
+            
+            {/* Pasek postępu legislacyjnego */}
+            <div className="mb-6">
+              <div className="flex items-center justify-between text-sm text-gray-600 dark:text-gray-400 mb-3">
+                <span>Etap legislacyjny</span>
+                <span className="font-medium text-lg">{getStatusText(bill.status)}</span>
+              </div>
+              <div className="relative">
+                <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3">
+                  <div 
+                    className={`h-3 rounded-full transition-all duration-700 ${getLegislativeProgressColor(bill.status)}`}
+                    style={{ width: `${getLegislativeProgress(bill.status)}%` }}
+                  ></div>
+                </div>
+                {/* Etapy legislacyjne */}
+                <div className="flex justify-between mt-3 text-sm text-gray-500 dark:text-gray-400">
+                  <span className={getStageActiveClass(bill.status, 'Wpłynął do Sejmu')}>Wpłynął</span>
+                  <span className={getStageActiveClass(bill.status, 'I czytanie')}>I czytanie</span>
+                  <span className={getStageActiveClass(bill.status, 'II czytanie')}>II czytanie</span>
+                  <span className={getStageActiveClass(bill.status, 'III czytanie')}>III czytanie</span>
+                  <span className={getStageActiveClass(bill.status, 'Senat')}>Senat</span>
+                  <span className={getStageActiveClass(bill.status, 'Uchwalono')}>Uchwalono</span>
+                </div>
+              </div>
             </div>
 
             <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">
