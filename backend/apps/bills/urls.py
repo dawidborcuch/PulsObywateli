@@ -11,5 +11,7 @@ urlpatterns = [
     path('stats/', views.bill_stats, name='bill-stats'),
     path('featured/', views.featured_bills, name='featured-bills'),
     path('trending/', views.trending_bills, name='trending-bills'),
+    path('<int:bill_id>/ai-analysis/generate/', views.generate_ai_analysis, name='generate-ai-analysis'),
+    path('<int:bill_id>/ai-analysis/', views.get_ai_analysis, name='get-ai-analysis'),
 ]
 

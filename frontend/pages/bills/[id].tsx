@@ -5,6 +5,7 @@ import { useQuery, useMutation, useQueryClient } from 'react-query'
 import { format } from 'date-fns'
 import { pl } from 'date-fns/locale'
 import Layout from '@/components/Layout'
+import AIAnalysis from '@/components/AIAnalysis'
 import { useAuth } from '@/contexts/AuthContext'
 import api from '@/lib/api'
 import { 
@@ -205,14 +206,14 @@ export default function BillDetailPage() {
 
   const getProjectTypeText = (projectType: string): string => {
     const typeMap: { [key: string]: string } = {
-      'rządowy': 'Rządowy',
-      'obywatelski': 'Obywatelski',
-      'poselski': 'Poselski',
-      'senacki': 'Senacki',
-      'prezydencki': 'Prezydencki',
-      'unknown': 'Nieznany'
+      'rządowy': 'Projekt Rządowy',
+      'obywatelski': 'Projekt Obywatelski',
+      'poselski': 'Projekt Poselski',
+      'senacki': 'Projekt Senacki',
+      'prezydencki': 'Projekt Prezydencki',
+      'unknown': 'Projekt Nieznany'
     }
-    return typeMap[projectType] || 'Nieznany'
+    return typeMap[projectType] || 'Projekt Nieznany'
   }
 
   const getProjectTypeColor = (projectType: string): string => {
@@ -467,6 +468,11 @@ export default function BillDetailPage() {
                 </a>
               </div>
             )}
+          </div>
+
+          {/* Analiza AI */}
+          <div className="mb-8">
+            <AIAnalysis billId={bill.id} billTitle={bill.title} />
           </div>
 
           {/* Pełny tekst projektu */}

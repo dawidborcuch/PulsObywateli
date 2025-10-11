@@ -11,6 +11,7 @@ from .serializers import (
     BillSerializer, BillVoteSerializer, BillUpdateSerializer, 
     BillCreateSerializer, BillStatsSerializer
 )
+from .services import AIAnalysisService
 
 
 class BillListView(generics.ListAPIView):
@@ -210,4 +211,85 @@ def trending_bills(request):
     
     serializer = BillSerializer(bills, many=True, context={'request': request})
     return Response(serializer.data)
+
+
+@api_view(['POST'])
+@permission_classes([permissions.IsAuthenticated])
+def generate_ai_analysis(request, bill_id):
+    """Generuje analizę AI dla konkretnego projektu ustawy"""
+    try:
+        bill = Bill.objects.get(id=bill_id)
+    except Bill.DoesNotExist:
+        return Response(
+            {'error': 'Projekt ustawy nie został znaleziony'}, 
+            status=status.HTTP_404_NOT_FOUND
+        )
+    
+    # Sprawdź czy projekt ma tekst do analizy
+    if not bill.full_text and not bill.description:
+        return Response(
+            {'error': 'Projekt nie ma tekstu do analizy'}, 
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    
+    try:
+        # Wygeneruj analizę
+        ai_service = AIAnalysisService()
+        analysis = ai_service.analyze_bill(bill)
+        
+        if 'error' in analysis:
+            return Response(
+                {'error': analysis['error']}, 
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+        
+        # Zapisz analizę
+        if ai_service.save_analysis_to_bill(bill, analysis):
+            # Odśwież bill z bazy danych aby uzyskać analysis_date
+            bill.refresh_from_db()
+            return Response({
+                'success': True,
+                'analysis': analysis,
+                'analysis_date': bill.ai_analysis_date,
+                'bill_id': bill.id,
+                'bill_title': bill.title,
+                'message': 'Analiza została wygenerowana pomyślnie'
+            })
+        else:
+            return Response(
+                {'error': 'Błąd podczas zapisywania analizy'}, 
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+            
+    except Exception as e:
+        return Response(
+            {'error': f'Błąd podczas generowania analizy: {str(e)}'}, 
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
+@api_view(['GET'])
+@permission_classes([permissions.AllowAny])
+def get_ai_analysis(request, bill_id):
+    """Pobiera analizę AI dla konkretnego projektu ustawy"""
+    try:
+        bill = Bill.objects.get(id=bill_id)
+    except Bill.DoesNotExist:
+        return Response(
+            {'error': 'Projekt ustawy nie został znaleziony'}, 
+            status=status.HTTP_404_NOT_FOUND
+        )
+    
+    if not bill.ai_analysis:
+        return Response(
+            {'error': 'Analiza AI nie została jeszcze wygenerowana'}, 
+            status=status.HTTP_404_NOT_FOUND
+        )
+    
+    return Response({
+        'analysis': bill.ai_analysis,
+        'analysis_date': bill.ai_analysis_date,
+        'bill_id': bill.id,
+        'bill_title': bill.title
+    })
 

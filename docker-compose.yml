@@ -22,6 +22,7 @@ services:
     environment:
       - DEBUG=1
       - DATABASE_URL=postgresql://postgres:postgres@db:5432/pulsobywateli
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
 
   frontend:
     build: ./frontend

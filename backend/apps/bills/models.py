@@ -55,6 +55,10 @@ class Bill(models.Model):
     attachments = models.JSONField(blank=True, null=True, verbose_name="Załączniki", help_text="Lista załączników (PDF, DOCX)")
     attachment_files = models.JSONField(blank=True, null=True, verbose_name="Pliki załączników", help_text="Przechowywane pliki załączników")
     
+    # Analiza AI
+    ai_analysis = models.JSONField(blank=True, null=True, verbose_name="Analiza AI", help_text="Analiza projektu przez AI (zmiany, zagrożenia, korzyści)")
+    ai_analysis_date = models.DateTimeField(blank=True, null=True, verbose_name="Data analizy AI", help_text="Kiedy została wykonana analiza AI")
+    
     # Dane z API Sejmu
     sejm_id = models.CharField(max_length=50, blank=True, verbose_name="ID w API Sejmu", help_text="Identyfikator w systemie Sejmu")
     eli = models.URLField(max_length=500, blank=True, verbose_name="ELI", help_text="European Legislation Identifier")

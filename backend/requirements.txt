@@ -9,10 +9,13 @@ Pillow==10.1.0
 requests==2.31.0
 beautifulsoup4==4.12.2
 lxml==4.9.3
-celery==5.3.4
-redis==5.0.1
-django-celery-beat==2.5.0
-django-celery-results==2.5.1
+# Celery removed for now
 gunicorn==21.2.0
 whitenoise==6.6.0
+openai==1.12.0
+httpx==0.27.0
+pytesseract==0.3.10
+Pillow==10.1.0
+pdf2image==1.16.3
+pdfplumber==0.10.3
 

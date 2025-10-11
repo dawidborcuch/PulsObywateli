@@ -3,6 +3,7 @@ import json
 from django.core.management.base import BaseCommand
 from django.utils import timezone
 from apps.bills.models import Bill
+from apps.bills.services import AIAnalysisService
 from datetime import datetime
 import re
 
@@ -28,11 +29,25 @@ class Command(BaseCommand):
             action='store_true',
             help='Wymuś aktualizację istniejących projektów'
         )
+        parser.add_argument(
+            '--ai-analysis',
+            action='store_true',
+            help='Automatycznie generuj analizę AI dla nowych projektów'
+        )
 
     def handle(self, *args, **options):
         limit = options['limit']
         term = options['term']
         force_update = options['force']
+        ai_analysis_enabled = options['ai_analysis']
+        
+        # Inicjalizuj serwis AI jeśli włączony
+        ai_service = None
+        if ai_analysis_enabled:
+            ai_service = AIAnalysisService()
+            if not ai_service.is_openai_configured():
+                self.stdout.write(self.style.WARNING('OpenAI API key nie jest skonfigurowany. Analiza AI zostanie pominięta.'))
+                ai_service = None
         
         self.stdout.write(
             self.style.SUCCESS(f'Rozpoczynam pobieranie projektów ustaw z API Sejmu...')
@@ -48,7 +63,7 @@ class Command(BaseCommand):
             updated_count = 0
             
             for bill_data in sejm_bills:
-                bill, created = self.create_or_update_bill(bill_data, force_update)
+                bill, created = self.create_or_update_bill(bill_data, force_update, ai_service)
                 if created:
                     created_count += 1
                 elif not created and force_update:
@@ -82,10 +97,11 @@ class Command(BaseCommand):
             prints = response.json()
             self.stdout.write(f'Znaleziono {len(prints)} druków w API Sejmu')
             
-            # Filtruj druki według daty (ostatnie 3 miesiące)
+            # Filtruj druki według daty (dzień bieżący + dzień poprzedni)
             filtered_prints = []
             from datetime import datetime, timedelta
-            cutoff_date = datetime.now() - timedelta(days=90)  # 3 miesiące temu
+            today = datetime.now().date()  # Dzisiejszy dzień
+            yesterday = today - timedelta(days=1)  # Dzień poprzedni
             
             # Debug: wyświetl daty druków
             self.stdout.write('=== DEBUG: DATY DRUKÓW ===')
@@ -110,20 +126,20 @@ class Command(BaseCommand):
                             else:
                                 date_obj = datetime.strptime(date_to_check, '%Y-%m-%d')
                             
-                            # Filtruj tylko druki z ostatnich 3 miesięcy
-                            if date_obj >= cutoff_date:
+                            # Filtruj druki z dnia bieżącego + dnia poprzedniego
+                            if date_obj.date() == today or date_obj.date() == yesterday:
                                 filtered_prints.append(print_item)
                         except:
                             # Jeśli nie można sparsować daty, dodaj druk
                             filtered_prints.append(print_item)
                     else:
-                        # Jeśli brak daty, dodaj druk
-                        filtered_prints.append(print_item)
+                        # Jeśli brak daty, pomiń druk (nie dodawaj)
+                        pass
                 except:
-                    # Jeśli błąd, dodaj druk
-                    filtered_prints.append(print_item)
+                    # Jeśli błąd, pomiń druk (nie dodawaj)
+                    pass
             
-            self.stdout.write(f'Po filtrowaniu daty: {len(filtered_prints)} druków z ostatnich 3 miesięcy')
+            self.stdout.write(f'Po filtrowaniu daty: {len(filtered_prints)} druków z dnia bieżącego ({today}) + dnia poprzedniego ({yesterday})')
             
             for i, print_item in enumerate(filtered_prints[:limit]):
                 try:
@@ -141,17 +157,27 @@ class Command(BaseCommand):
         return bills_data
 
     def parse_pdf_content(self, pdf_content):
-        """Parsuje zawartość PDF do tekstu"""
+        """Parsuje zawartość PDF do tekstu z obsługą OCR dla skanowanych dokumentów"""
         try:
             import io
             import pdfplumber
             
             with pdfplumber.open(io.BytesIO(pdf_content)) as pdf:
                 text = ""
-                for page in pdf.pages:
+                pages_with_text = 0
+                total_pages = len(pdf.pages)
+                
+                # Spróbuj wyciągnąć tekst z każdej strony
+                for i, page in enumerate(pdf.pages):
                     page_text = page.extract_text()
-                    if page_text:
+                    if page_text and page_text.strip():
                         text += page_text + "\n"
+                        pages_with_text += 1
+                
+                # Jeśli mniej niż 10% stron ma tekst, prawdopodobnie to skan
+                if pages_with_text < total_pages * 0.1 and total_pages > 5:
+                    self.stdout.write(f'PDF prawdopodobnie skanowany ({pages_with_text}/{total_pages} stron z tekstem) - próba OCR...')
+                    return self.parse_pdf_with_ocr(pdf_content)
                 
                 return text.strip() if text.strip() else None
             
@@ -162,6 +188,36 @@ class Command(BaseCommand):
             return self.parse_pdf_content(pdf_content)
         except Exception as e:
             self.stdout.write(f'Błąd parsowania PDF: {str(e)}')
+            return None
+    
+    def parse_pdf_with_ocr(self, pdf_content):
+        """Parsuje skanowany PDF używając OCR"""
+        try:
+            from pdf2image import convert_from_bytes
+            import pytesseract
+            from PIL import Image
+            
+            # Konwertuj PDF na obrazy
+            images = convert_from_bytes(pdf_content, first_page=1, last_page=5)  # Pierwsze 5 stron
+            
+            text = ""
+            for i, image in enumerate(images):
+                try:
+                    # Użyj OCR do wyciągnięcia tekstu z obrazu
+                    page_text = pytesseract.image_to_string(image, lang='pol')
+                    if page_text.strip():
+                        text += page_text + "\n"
+                        self.stdout.write(f'OCR strona {i+1}: {len(page_text)} znaków')
+                except Exception as e:
+                    self.stdout.write(f'Błąd OCR dla strony {i+1}: {str(e)}')
+            
+            return text.strip() if text.strip() else None
+            
+        except ImportError as e:
+            self.stdout.write(f'OCR nie jest dostępny: {str(e)}')
+            return None
+        except Exception as e:
+            self.stdout.write(f'Błąd OCR: {str(e)}')
             return None
 
     def parse_docx_content(self, docx_content):
@@ -630,7 +686,7 @@ class Command(BaseCommand):
         except:
             return "ustawa, sejm, legislacja"
 
-    def create_or_update_bill(self, bill_data, force_update=False):
+    def create_or_update_bill(self, bill_data, force_update=False, ai_service=None):
         """Tworzy lub aktualizuje projekt ustawy"""
         try:
             
@@ -689,8 +745,43 @@ class Command(BaseCommand):
                 bill.attachment_files = bill_data.get('attachment_files', [])
                 bill.save()
             
+            # Generuj analizę AI dla nowych projektów lub gdy włączono force_update
+            if ai_service and (created or force_update):
+                self._generate_ai_analysis_for_bill(bill, ai_service)
+            
             return bill, created
             
         except Exception as e:
             self.stdout.write(self.style.ERROR(f'Błąd tworzenia/aktualizacji projektu {bill_data["number"]}: {str(e)}'))
             return None, False
+    
+    def _generate_ai_analysis_for_bill(self, bill, ai_service):
+        """Generuje analizę AI dla projektu ustawy"""
+        try:
+            # Sprawdź czy projekt ma tekst do analizy
+            if not bill.full_text and not bill.description:
+                self.stdout.write(self.style.WARNING(f'Projekt {bill.number} nie ma tekstu do analizy AI'))
+                return
+            
+            # Sprawdź czy analiza już istnieje
+            if bill.ai_analysis:
+                self.stdout.write(f'Projekt {bill.number} już ma analizę AI, pomijam...')
+                return
+            
+            self.stdout.write(f'Generuję analizę AI dla projektu {bill.number}...')
+            
+            # Wygeneruj analizę
+            analysis_result = ai_service.analyze_bill(bill)
+            
+            if 'error' in analysis_result:
+                self.stdout.write(self.style.ERROR(f'Błąd analizy AI dla {bill.number}: {analysis_result["error"]}'))
+                return
+            
+            # Zapisz analizę
+            if ai_service.save_analysis_to_bill(bill, analysis_result):
+                self.stdout.write(self.style.SUCCESS(f'Pomyślnie wygenerowano analizę AI dla {bill.number}'))
+            else:
+                self.stdout.write(self.style.ERROR(f'Błąd podczas zapisywania analizy AI dla {bill.number}'))
+                
+        except Exception as e:
+            self.stdout.write(self.style.ERROR(f'Nieoczekiwany błąd podczas generowania analizy AI dla {bill.number}: {str(e)}'))

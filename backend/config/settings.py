@@ -15,6 +15,7 @@ env = environ.Env(
     SECRET_KEY=(str, 'django-insecure-change-me-in-production'),
     DATABASE_URL=(str, 'postgresql://postgres:postgres@localhost:5432/pulsobywateli'),
     REDIS_URL=(str, 'redis://localhost:6379/0'),
+    OPENAI_API_KEY=(str, ''),
 )
 
 # Read .env file
@@ -25,6 +26,9 @@ SECRET_KEY = env('SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = env('DEBUG')
+
+# OpenAI Configuration
+OPENAI_API_KEY = env('OPENAI_API_KEY')
 
 ALLOWED_HOSTS = ['localhost', '127.0.0.1', '0.0.0.0', 'backend']
 
@@ -163,13 +167,7 @@ CORS_ALLOWED_ORIGINS = [
 
 CORS_ALLOW_CREDENTIALS = True
 
-# Celery Configuration
-CELERY_BROKER_URL = env('REDIS_URL')
-CELERY_RESULT_BACKEND = env('REDIS_URL')
-CELERY_ACCEPT_CONTENT = ['json']
-CELERY_TASK_SERIALIZER = 'json'
-CELERY_RESULT_SERIALIZER = 'json'
-CELERY_TIMEZONE = TIME_ZONE
+# Celery removed for now
 
 # Email configuration (for development)
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
@@ -188,4 +186,7 @@ LOGGING = {
         'level': 'INFO',
     },
 }
+
+# Celery Configuration
+# Celery removed for now
 

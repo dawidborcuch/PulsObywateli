@@ -352,14 +352,14 @@ export default function BillsPage() {
 // Funkcje pomocnicze dla wyświetlania typu projektu
 function getProjectTypeText(projectType: string): string {
   const typeMap: { [key: string]: string } = {
-    'rządowy': 'Rządowy',
-    'obywatelski': 'Obywatelski',
-    'poselski': 'Poselski',
-    'senacki': 'Senacki',
-    'prezydencki': 'Prezydencki',
-    'unknown': 'Nieznany'
+    'rządowy': 'Projekt Rządowy',
+    'obywatelski': 'Projekt Obywatelski',
+    'poselski': 'Projekt Poselski',
+    'senacki': 'Projekt Senacki',
+    'prezydencki': 'Projekt Prezydencki',
+    'unknown': 'Projekt Nieznany'
   }
-  return typeMap[projectType] || 'Nieznany'
+  return typeMap[projectType] || 'Projekt Nieznany'
 }
 
 function getProjectTypeColor(projectType: string): string {
