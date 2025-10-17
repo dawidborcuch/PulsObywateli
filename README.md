@@ -1,113 +1,65 @@
 # PulsObywateli
 
-Obywatelska platforma sondażowo-informacyjna do śledzenia i oceniania projektów ustaw w Polsce oraz głosowania w sondażach dotyczących polityków i tematów społecznych.
+Platforma do śledzenia i oceniania projektów ustaw w Polsce.
 
-## 🎯 Cel projektu
+## Konfiguracja
 
-Budowanie świadomości obywatelskiej poprzez ułatwienie dostępu do informacji o pracach Sejmu oraz pokazywanie rzeczywistych nastrojów społecznych.
-
-## 🛠 Technologie
-
-- **Backend**: Python + Django REST Framework
-- **Frontend**: Next.js + TypeScript + Tailwind CSS
-- **Baza danych**: PostgreSQL
-- **API**: Integracja z API Sejmu RP
-- **Hosting**: Docker + VPS
-
-## 🚀 Szybki start
-
-### Wymagania
-- Docker i Docker Compose
-- Node.js 18+ (dla rozwoju frontend)
-- Python 3.9+ (dla rozwoju backend)
-
-### Uruchomienie
-
+### 1. Klonowanie repozytorium
 ```bash
-# Klonowanie repozytorium
-git clone <repo-url>
+git clone <repository-url>
 cd PulsObywateli
-
-# Uruchomienie z Docker
-docker-compose up --build
-
-# Lub rozwój lokalny
-# Backend
-cd backend
-pip install -r requirements.txt
-python manage.py runserver
-
-# Frontend
-cd frontend
-npm install
-npm run dev
 ```
 
-## 📁 Struktura projektu
+### 2. Konfiguracja zmiennych środowiskowych
 
-```
-PulsObywateli/
-├── backend/                 # Django REST API
-│   ├── apps/
-│   │   ├── accounts/       # Zarządzanie użytkownikami
-│   │   ├── bills/          # Projekty ustaw
-│   │   ├── polls/          # Sondaże
-│   │   └── comments/       # System komentarzy
-│   ├── config/             # Konfiguracja Django
-│   └── requirements.txt
-├── frontend/               # Next.js aplikacja
-│   ├── components/         # Komponenty React
-│   ├── pages/             # Strony aplikacji
-│   ├── styles/            # Style CSS
-│   └── package.json
-├── docker-compose.yml      # Konfiguracja Docker
-└── README.md
-```
+Utwórz plik `.env` w głównym katalogu projektu:
 
-## 🧩 Funkcjonalności MVP
-
-- ✅ Automatyczne pobieranie projektów ustaw z API Sejmu RP
-- ✅ System głosowania na projekty ustaw
-- ✅ Sondaże polityczne z wykresami
-- ✅ System kont użytkowników
-- ✅ Ranking poparcia
-- ✅ System komentarzy
-- ✅ Panel administratora
-
-## 📊 API Endpoints
-
-### Projekty ustaw
-- `GET /api/bills/` - Lista projektów ustaw
-- `GET /api/bills/{id}/` - Szczegóły projektu
-- `POST /api/bills/{id}/vote/` - Głosowanie
-
-### Sondaże
-- `GET /api/polls/` - Lista sondaży
-- `POST /api/polls/{id}/vote/` - Głosowanie w sondażu
-
-### Użytkownicy
-- `POST /api/auth/register/` - Rejestracja
-- `POST /api/auth/login/` - Logowanie
-- `GET /api/users/profile/` - Profil użytkownika
-
-## 🔧 Rozwój
-
-### Backend
 ```bash
-cd backend
-python manage.py makemigrations
-python manage.py migrate
-python manage.py createsuperuser
-python manage.py runserver
+# OpenAI API Key
+OPENAI_API_KEY=your_openai_api_key_here
 ```
 
-### Frontend
+**UWAGA**: Plik `.env` jest już dodany do `.gitignore` i nie będzie commitowany do repozytorium.
+
+### 3. Uruchomienie aplikacji
+
 ```bash
-cd frontend
-npm run dev
+docker compose up -d
 ```
 
-## 📝 Licencja
+Aplikacja będzie dostępna pod adresami:
+- Frontend: http://localhost:3000
+- Backend API: http://localhost:8000
+- Nginx: http://localhost:80
 
-MIT License
+### 4. Zatrzymanie aplikacji
 
+```bash
+docker compose down
+```
+
+## Funkcje
+
+- **Projekty ustaw**: Przeglądanie i głosowanie na projekty ustaw
+- **Analiza AI**: Automatyczna analiza projektów ustaw przez AI
+- **Głosowania kworum**: Obsługa specjalnych głosowań kworum w Sejmie
+- **Wyniki głosowań**: Szczegółowe wyniki głosowań posłów
+- **Sondaże**: Ankiety społeczne
+- **Ranking**: Statystyki wsparcia projektów
+
+## Struktura projektu
+
+```
+├── backend/          # Django REST API
+├── frontend/         # Next.js aplikacja
+├── docker-compose.yml # Konfiguracja Docker
+├── .env              # Zmienne środowiskowe (lokalne)
+├── .env.example      # Wzorzec zmiennych środowiskowych
+└── README.md         # Ten plik
+```
+
+## Bezpieczeństwo
+
+- Klucze API są przechowywane w zmiennych środowiskowych
+- Plik `.env` jest ignorowany przez Git
+- Używaj `.env.example` jako wzorca dla innych deweloperów

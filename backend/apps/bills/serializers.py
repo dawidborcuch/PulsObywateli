@@ -18,7 +18,7 @@ class BillSerializer(serializers.ModelSerializer):
             'neutral_votes', 'total_votes', 'support_percentage', 'against_percentage',
             'neutral_percentage', 'is_active', 'is_featured', 'tags', 'tags_list',
             'project_type', 'data_source', 'sejm_id', 'eli', 'passed',
-            'full_text', 'attachments', 'attachment_files',
+            'full_text', 'attachments', 'attachment_files', 'ai_analysis', 'ai_analysis_date',
             'voting_date', 'voting_number', 'session_number', 'voting_topic', 'voting_results',
             'created_at', 'updated_at', 'user_vote'
         ]

@@ -6,7 +6,7 @@ interface Deputy {
   party: string
   first_name: string
   last_name: string
-  vote: string
+  vote: 'ZA' | 'PRZECIW' | 'WSTRZYMAŁ' | 'NIE GŁOSOWAŁ' | 'OBECNY'
 }
 
 interface VotingDeputiesProps {
@@ -37,6 +37,8 @@ export default function VotingDeputies({ billId }: VotingDeputiesProps) {
         return 'text-yellow-600 bg-yellow-100 dark:bg-yellow-900 dark:text-yellow-200'
       case 'NIE GŁOSOWAŁ':
         return 'text-gray-600 bg-gray-100 dark:bg-gray-700 dark:text-gray-200'
+      case 'OBECNY':
+        return 'text-blue-600 bg-blue-100 dark:bg-blue-900 dark:text-blue-200'
       default:
         return 'text-gray-600 bg-gray-100 dark:bg-gray-700 dark:text-gray-200'
     }
@@ -52,6 +54,8 @@ export default function VotingDeputies({ billId }: VotingDeputiesProps) {
         return 'Wstrzymał'
       case 'NIE GŁOSOWAŁ':
         return 'Nie głosował'
+      case 'OBECNY':
+        return 'Obecny'
       default:
         return vote
     }

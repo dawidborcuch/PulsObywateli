@@ -250,24 +250,45 @@ export default function BillsPage() {
                   {/* Wyniki głosowania */}
                   {bill.voting_results && (
                     <div className="mb-4 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                      <div className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-2">Wyniki głosowania</div>
+                      <div className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        {bill.description?.includes('kworum') ? 'Wyniki kworum' : 'Wyniki głosowania'}
+                      </div>
                       <div className="grid grid-cols-2 gap-2 text-xs">
-                        <div className="flex items-center justify-between">
-                          <span className="text-green-600 dark:text-green-400">Za:</span>
-                          <span className="font-medium text-green-600 dark:text-green-400">{bill.voting_results.za}</span>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <span className="text-red-600 dark:text-red-400">Przeciw:</span>
-                          <span className="font-medium text-red-600 dark:text-red-400">{bill.voting_results.przeciw}</span>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <span className="text-yellow-600 dark:text-yellow-400">Wstrzymali:</span>
-                          <span className="font-medium text-yellow-600 dark:text-yellow-400">{bill.voting_results.wstrzymali}</span>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <span className="text-gray-600 dark:text-gray-400">Nie głosowało:</span>
-                          <span className="font-medium text-gray-600 dark:text-gray-400">{bill.voting_results.nie_glosowalo}</span>
-                        </div>
+                        {bill.description?.includes('kworum') ? (
+                          <>
+                            <div className="flex items-center justify-between">
+                              <span className="text-blue-600 dark:text-blue-400">Obecni:</span>
+                              <span className="font-medium text-blue-600 dark:text-blue-400">{bill.voting_results.total_voted - bill.voting_results.nie_glosowalo}</span>
+                            </div>
+                            <div className="flex items-center justify-between">
+                              <span className="text-gray-600 dark:text-gray-400">Nie głosowało:</span>
+                              <span className="font-medium text-gray-600 dark:text-gray-400">{bill.voting_results.nie_glosowalo}</span>
+                            </div>
+                            <div className="flex items-center justify-between">
+                              <span className="text-gray-500 dark:text-gray-500">Łącznie:</span>
+                              <span className="font-medium text-gray-500 dark:text-gray-500">{bill.voting_results.total_voted}</span>
+                            </div>
+                          </>
+                        ) : (
+                          <>
+                            <div className="flex items-center justify-between">
+                              <span className="text-green-600 dark:text-green-400">Za:</span>
+                              <span className="font-medium text-green-600 dark:text-green-400">{bill.voting_results.za}</span>
+                            </div>
+                            <div className="flex items-center justify-between">
+                              <span className="text-red-600 dark:text-red-400">Przeciw:</span>
+                              <span className="font-medium text-red-600 dark:text-red-400">{bill.voting_results.przeciw}</span>
+                            </div>
+                            <div className="flex items-center justify-between">
+                              <span className="text-yellow-600 dark:text-yellow-400">Wstrzymali:</span>
+                              <span className="font-medium text-yellow-600 dark:text-yellow-400">{bill.voting_results.wstrzymali}</span>
+                            </div>
+                            <div className="flex items-center justify-between">
+                              <span className="text-gray-600 dark:text-gray-400">Nie głosowało:</span>
+                              <span className="font-medium text-gray-600 dark:text-gray-400">{bill.voting_results.nie_glosowalo}</span>
+                            </div>
+                          </>
+                        )}
                       </div>
                     </div>
                   )}

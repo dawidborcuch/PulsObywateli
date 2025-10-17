@@ -421,7 +421,7 @@ def parse_deputies_from_text(text):
             continue
         
         # Sprawdź czy to linia z posłami (zawiera skróty głosów)
-        if current_party and any(word in line.lower() for word in ['za', 'pr.', 'wstrzymał', 'ws.', 'ng.', 'nie']):
+        if current_party and any(word in line.lower() for word in ['za', 'pr.', 'wstrzymał', 'ws.', 'ng.', 'nie', 'ob.']):
             # Podziel linię na poszczególnych posłów
             # Format PDF: "NAZWISKO IMIĘ skrót_głosu NAZWISKO IMIĘ skrót_głosu"
             words = line.split()
@@ -445,6 +445,8 @@ def parse_deputies_from_text(text):
                             vote = 'WSTRZYMAŁ'
                         elif vote_short == 'ng.':
                             vote = 'NIE GŁOSOWAŁ'
+                        elif vote_short == 'ob.':
+                            vote = 'OBECNY'
                         elif vote_short == 'nie' and i + 3 < len(words) and words[i+3].lower() == 'głosował':
                             vote = 'NIE GŁOSOWAŁ'
                             i += 4
