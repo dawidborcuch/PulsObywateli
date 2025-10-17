@@ -8,6 +8,7 @@ import Layout from '@/components/Layout'
 import AIAnalysis from '@/components/AIAnalysis'
 import SejmVotes from '@/components/SejmVotes'
 import VotingDeputies from '@/components/VotingDeputies'
+import VotingProjectPdfs from '@/components/VotingProjectPdfs'
 import { useAuth } from '@/contexts/AuthContext'
 import api from '@/lib/api'
 import { 
@@ -494,6 +495,11 @@ export default function BillDetailPage() {
           {/* Głosowania w Sejmie */}
           <div className="mb-8">
             <SejmVotes billId={bill.id} billTitle={bill.title} />
+          </div>
+
+          {/* PDF-y projektów ustaw */}
+          <div className="mb-8">
+            <VotingProjectPdfs billId={bill.id} />
           </div>
 
           {/* Pełny tekst projektu */}

@@ -350,6 +350,58 @@ def get_voting_pdf_data(request, bill_id):
         )
 
 
+@api_view(['GET'])
+@permission_classes([permissions.AllowAny])
+def get_voting_project_pdfs(request, bill_id):
+    """Pobiera PDF-y projektów ustaw dla danego głosowania"""
+    try:
+        bill = Bill.objects.get(id=bill_id)
+    except Bill.DoesNotExist:
+        return Response(
+            {'error': 'Projekt ustawy nie został znaleziony'}, 
+            status=status.HTTP_404_NOT_FOUND
+        )
+    
+    try:
+        import requests
+        
+        # Pobierz dane głosowania z API Sejmu
+        voting_data = bill.api_data
+        if not voting_data:
+            return Response(
+                {'error': 'Brak danych głosowania'}, 
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        # Wyciągnij numery druków z tytułu
+        title = voting_data.get('title', '')
+        print_numbers = extract_print_numbers_from_title(title)
+        
+        if not print_numbers:
+            return Response({
+                'project_pdfs': [],
+                'message': 'Brak numerów druków w tytule głosowania'
+            })
+        
+        # Pobierz PDF-y dla każdego numeru druku
+        all_pdfs = []
+        for print_number in print_numbers:
+            pdfs = download_print_pdfs(print_number)
+            all_pdfs.extend(pdfs)
+        
+        return Response({
+            'project_pdfs': all_pdfs,
+            'print_numbers': print_numbers,
+            'total_count': len(all_pdfs)
+        })
+        
+    except Exception as e:
+        return Response(
+            {'error': f'Błąd podczas pobierania PDF-ów projektów: {str(e)}'}, 
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
 def parse_deputies_from_text(text):
     """Parsuje dane posłów z tekstu PDF"""
     deputies = []
@@ -362,14 +414,14 @@ def parse_deputies_from_text(text):
         if not line:
             continue
             
-        # Sprawdź czy to nazwa partii (np. "PiS(188)", "Konfederacja_KP(3)", "niez.(4)")
-        party_match = re.search(r'^([A-ZĄĆĘŁŃÓŚŹŻa-ząćęłńóśźż_.]+)\([0-9]+\)', line)
+        # Sprawdź czy to nazwa partii (np. "PiS(188)", "Konfederacja_KP(3)", "PSL-TD(63)", "niez.(4)")
+        party_match = re.search(r'^([A-ZĄĆĘŁŃÓŚŹŻa-ząćęłńóśźż_.-]+)\([0-9]+\)', line)
         if party_match:
             current_party = party_match.group(1).strip()
             continue
         
         # Sprawdź czy to linia z posłami (zawiera skróty głosów)
-        if current_party and any(word in line.lower() for word in ['za', 'pr.', 'wstrzymał', 'ng.', 'nie']):
+        if current_party and any(word in line.lower() for word in ['za', 'pr.', 'wstrzymał', 'ws.', 'ng.', 'nie']):
             # Podziel linię na poszczególnych posłów
             # Format PDF: "NAZWISKO IMIĘ skrót_głosu NAZWISKO IMIĘ skrót_głosu"
             words = line.split()
@@ -389,7 +441,7 @@ def parse_deputies_from_text(text):
                             vote = 'ZA'
                         elif vote_short == 'pr.':
                             vote = 'PRZECIW'
-                        elif vote_short == 'wstrzymał':
+                        elif vote_short == 'wstrzymał' or vote_short == 'ws.':
                             vote = 'WSTRZYMAŁ'
                         elif vote_short == 'ng.':
                             vote = 'NIE GŁOSOWAŁ'
@@ -420,4 +472,54 @@ def parse_deputies_from_text(text):
                     i += 1
     
     return deputies
+
+
+def extract_print_numbers_from_title(title):
+    """Wyciąga numery druków z tytułu głosowania"""
+    import re
+    # Znajdź wszystkie liczby 3-5 cyfrowe
+    numbers = re.findall(r'\d{3,5}', title)
+    return numbers
+
+
+def download_print_pdfs(print_number):
+    """Pobiera PDF-y dla danego numeru druku"""
+    import requests
+    
+    headers = {"Accept": "application/json"}
+    url = f"https://api.sejm.gov.pl/sejm/term10/prints/{print_number}"
+    
+    try:
+        response = requests.get(url, headers=headers, timeout=30)
+        response.raise_for_status()
+        data = response.json()
+        
+        pdf_files = []
+        
+        # Główne załączniki
+        for att in data.get("attachments", []):
+            if att.endswith(".pdf"):
+                pdf_url = f"https://api.sejm.gov.pl/sejm/term10/prints/{print_number}/{att}"
+                pdf_files.append({
+                    'name': att,
+                    'url': pdf_url,
+                    'type': 'main_attachment'
+                })
+        
+        # Dodatkowe druki
+        for add in data.get("additionalPrints", []):
+            for att in add.get("attachments", []):
+                if att.endswith(".pdf"):
+                    pdf_url = f"https://api.sejm.gov.pl/sejm/term10/prints/{print_number}/{att}"
+                    pdf_files.append({
+                        'name': att,
+                        'url': pdf_url,
+                        'type': 'additional_print'
+                    })
+        
+        return pdf_files
+        
+    except Exception as e:
+        print(f"Błąd pobierania druku {print_number}: {str(e)}")
+        return []
 

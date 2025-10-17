@@ -14,5 +14,6 @@ urlpatterns = [
     path('<int:bill_id>/ai-analysis/generate/', views.generate_ai_analysis, name='generate-ai-analysis'),
     path('<int:bill_id>/ai-analysis/', views.get_ai_analysis, name='get-ai-analysis'),
     path('<int:bill_id>/pdf-data/', views.get_voting_pdf_data, name='get-voting-pdf-data'),
+    path('<int:bill_id>/project-pdfs/', views.get_voting_project_pdfs, name='get-voting-project-pdfs'),
 ]
 
