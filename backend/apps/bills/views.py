@@ -362,8 +362,8 @@ def parse_deputies_from_text(text):
         if not line:
             continue
             
-        # Sprawdź czy to nazwa partii (np. "PiS(188) GŁOSOWAŁO")
-        party_match = re.search(r'^([A-ZĄĆĘŁŃÓŚŹŻa-ząćęłńóśźż]+)\([0-9]+\)', line)
+        # Sprawdź czy to nazwa partii (np. "PiS(188)", "Konfederacja_KP(3)", "niez.(4)")
+        party_match = re.search(r'^([A-ZĄĆĘŁŃÓŚŹŻa-ząćęłńóśźż_.]+)\([0-9]+\)', line)
         if party_match:
             current_party = party_match.group(1).strip()
             continue
