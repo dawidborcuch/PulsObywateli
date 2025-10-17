@@ -59,6 +59,16 @@ class Bill(models.Model):
     ai_analysis = models.JSONField(blank=True, null=True, verbose_name="Analiza AI", help_text="Analiza projektu przez AI (zmiany, zagrożenia, korzyści)")
     ai_analysis_date = models.DateTimeField(blank=True, null=True, verbose_name="Data analizy AI", help_text="Kiedy została wykonana analiza AI")
     
+    # Głosowania w Sejmie (nowe dane ze strony Sejmu)
+    voting_date = models.CharField(max_length=50, blank=True, verbose_name="Data głosowania", help_text="Data głosowania w Sejmie")
+    voting_time = models.CharField(max_length=20, blank=True, verbose_name="Godzina głosowania", help_text="Godzina głosowania")
+    session_number = models.CharField(max_length=10, blank=True, verbose_name="Nr posiedzenia", help_text="Numer posiedzenia Sejmu")
+    voting_number = models.IntegerField(blank=True, null=True, verbose_name="Nr głosowania", help_text="Numer głosowania")
+    voting_topic = models.TextField(blank=True, verbose_name="Temat głosowania", help_text="Temat głosowania")
+    voting_results = models.JSONField(blank=True, null=True, verbose_name="Wyniki głosowania", help_text="Wyniki ogólne głosowania")
+    club_results = models.JSONField(blank=True, null=True, verbose_name="Wyniki klubów", help_text="Wyniki głosowania według klubów")
+    druk_numbers = models.JSONField(blank=True, null=True, verbose_name="Numery druków", help_text="Numery druków związane z głosowaniem")
+    
     # Dane z API Sejmu
     sejm_id = models.CharField(max_length=50, blank=True, verbose_name="ID w API Sejmu", help_text="Identyfikator w systemie Sejmu")
     eli = models.URLField(max_length=500, blank=True, verbose_name="ELI", help_text="European Legislation Identifier")

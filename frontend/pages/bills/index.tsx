@@ -28,12 +28,26 @@ interface Bill {
   sejm_id: string
   eli: string
   passed: boolean
+  // Nowe pola z API Sejmu
+  voting_date?: string
+  voting_number?: string
+  session_number?: string
+  voting_topic?: string
+  voting_results?: {
+    total_voted: number
+    za: number
+    przeciw: number
+    wstrzymali: number
+    nie_glosowalo: number
+    majority_votes: number
+    majority_type: string
+  }
 }
 
 export default function BillsPage() {
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
-  const [sortBy, setSortBy] = useState('-submission_date')
+  const [sortBy, setSortBy] = useState('-session_number,-voting_number')
   const [currentPage, setCurrentPage] = useState(1)
 
   const { data: billsData, isLoading, error } = useQuery(
@@ -190,8 +204,10 @@ export default function BillsPage() {
                 onChange={(e) => setSortBy(e.target.value)}
                 className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
               >
-                <option value="-submission_date">Najnowsze</option>
-                <option value="submission_date">Najstarsze</option>
+                <option value="-session_number,-voting_number">Najnowsze głosowania</option>
+                <option value="session_number,voting_number">Najstarsze głosowania</option>
+                <option value="-submission_date">Najnowsze projekty</option>
+                <option value="submission_date">Najstarsze projekty</option>
                 <option value="-total_votes">Najpopularniejsze</option>
                 <option value="-support_votes">Najbardziej popierane</option>
               </select>
@@ -214,41 +230,14 @@ export default function BillsPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {bills?.map((bill) => (
                 <div key={bill.id} className="card p-6 hover:shadow-md transition-shadow duration-200">
-                  <div className="flex items-start justify-between mb-3">
-                    <div className="flex flex-col gap-1">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getProjectTypeColor(bill.project_type)}`}>
-                        {getProjectTypeText(bill.project_type)}
+                  {/* Informacja o posiedzeniu */}
+                  {bill.session_number && (
+                    <div className="mb-3">
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+                        Posiedzenie Sejmu nr {bill.session_number}
                       </span>
                     </div>
-                    <span className="text-sm text-gray-500 dark:text-gray-400">
-                      {bill.number}
-                    </span>
-                  </div>
-                  
-                  {/* Pasek postępu legislacyjnego */}
-                  <div className="mb-4">
-                    <div className="flex items-center justify-between text-xs text-gray-600 dark:text-gray-400 mb-2">
-                      <span>Etap legislacyjny</span>
-                      <span className="font-medium">{getStatusText(bill.status)}</span>
-                    </div>
-                    <div className="relative">
-                      <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                        <div 
-                          className={`h-2 rounded-full transition-all duration-500 ${getLegislativeProgressColor(bill.status)}`}
-                          style={{ width: `${getLegislativeProgress(bill.status)}%` }}
-                        ></div>
-                      </div>
-                      {/* Etapy legislacyjne */}
-                      <div className="flex justify-between mt-2 text-xs text-gray-500 dark:text-gray-400">
-                        <span className={getStageActiveClass(bill.status, 'Wpłynął do Sejmu')}>Wpłynął</span>
-                        <span className={getStageActiveClass(bill.status, 'I czytanie')}>I czytanie</span>
-                        <span className={getStageActiveClass(bill.status, 'II czytanie')}>II czytanie</span>
-                        <span className={getStageActiveClass(bill.status, 'III czytanie')}>III czytanie</span>
-                        <span className={getStageActiveClass(bill.status, 'Senat')}>Senat</span>
-                        <span className={getStageActiveClass(bill.status, 'Uchwalono')}>Uchwalono</span>
-                      </div>
-                    </div>
-                  </div>
+                  )}
                   
                   <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2 line-clamp-2">
                     {bill.title}
@@ -258,22 +247,42 @@ export default function BillsPage() {
                     {bill.description}
                   </p>
                   
-                  <div className="mb-4">
-                    <div className="flex items-center justify-between text-sm text-gray-600 dark:text-gray-400 mb-2">
-                      <span>Poparcie</span>
-                      <span>{bill.support_percentage}%</span>
+                  {/* Wyniki głosowania */}
+                  {bill.voting_results && (
+                    <div className="mb-4 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                      <div className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-2">Wyniki głosowania</div>
+                      <div className="grid grid-cols-2 gap-2 text-xs">
+                        <div className="flex items-center justify-between">
+                          <span className="text-green-600 dark:text-green-400">Za:</span>
+                          <span className="font-medium text-green-600 dark:text-green-400">{bill.voting_results.za}</span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-red-600 dark:text-red-400">Przeciw:</span>
+                          <span className="font-medium text-red-600 dark:text-red-400">{bill.voting_results.przeciw}</span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-yellow-600 dark:text-yellow-400">Wstrzymali:</span>
+                          <span className="font-medium text-yellow-600 dark:text-yellow-400">{bill.voting_results.wstrzymali}</span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-gray-600 dark:text-gray-400">Nie głosowało:</span>
+                          <span className="font-medium text-gray-600 dark:text-gray-400">{bill.voting_results.nie_glosowalo}</span>
+                        </div>
+                      </div>
                     </div>
-                    <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                      <div 
-                        className="bg-primary-600 h-2 rounded-full transition-all duration-300"
-                        style={{ width: `${bill.support_percentage}%` }}
-                      ></div>
-                    </div>
-                  </div>
+                  )}
                   
-                  <div className="flex items-center justify-between text-sm text-gray-500 dark:text-gray-400 mb-4">
-                    <span>{bill.total_votes} głosów</span>
-                    <span>{format(new Date(bill.submission_date), 'dd MMM yyyy', { locale: pl })}</span>
+                  <div className="flex items-center justify-end text-sm text-gray-500 dark:text-gray-400 mb-4">
+                    {bill.voting_date ? (
+                      <div className="text-right">
+                        <div className="font-medium">Głosowanie nr {bill.voting_number}</div>
+                        <div className="text-xs">
+                          {format(new Date(bill.voting_date), 'dd MMM yyyy HH:mm', { locale: pl })}
+                        </div>
+                      </div>
+                    ) : (
+                      <span>{format(new Date(bill.submission_date), 'dd MMM yyyy', { locale: pl })}</span>
+                    )}
                   </div>
                   
                   <Link href={`/bills/${bill.id}`}>

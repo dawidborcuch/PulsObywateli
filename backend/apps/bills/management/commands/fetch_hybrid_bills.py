@@ -7,6 +7,14 @@ from apps.bills.services import AIAnalysisService
 from datetime import datetime
 import re
 
+# Import konfiguracji Sejmu
+try:
+    from sejm_config import SEJM_TERM, CURRENT_PROCEEDING
+except ImportError:
+    # Fallback jeśli plik nie istnieje
+    SEJM_TERM = 10
+    CURRENT_PROCEEDING = 43
+
 
 class Command(BaseCommand):
     help = 'Pobiera projekty ustaw z API Sejmu RP'
@@ -50,7 +58,7 @@ class Command(BaseCommand):
                 ai_service = None
         
         self.stdout.write(
-            self.style.SUCCESS(f'Rozpoczynam pobieranie projektów ustaw z API Sejmu...')
+            self.style.SUCCESS(f'Rozpoczynam pobieranie projektów ustaw z API Sejmu (kadencja {term})...')
         )
         
         try:
@@ -79,709 +87,215 @@ class Command(BaseCommand):
             self.stdout.write(self.style.ERROR(f'Błąd podczas pobierania danych: {str(e)}'))
 
     def fetch_sejm_bills(self, term, limit):
-        """Pobiera dane projektów ustaw z API Sejmu używając endpointu /prints"""
+        """
+        Pobiera dane głosowań z API Sejmu RP dla aktualnego posiedzenia
+        API: https://api.sejm.gov.pl/sejm/term{term}/votings/{proceeding}
+        """
         bills_data = []
         
         try:
-            # Użyj endpointu /prints z sortowaniem według daty dostarczenia
-            url = f"https://api.sejm.gov.pl/sejm/term{term}/prints"
-            params = {
-                'sort_by': '-deliveryDate',  # Sortuj malejąco według daty dostarczenia
-                'limit': limit * 3  # Pobierz więcej, aby móc filtrować
-            }
-            self.stdout.write(f'Pobieranie z API Sejmu: {url}')
+            # Użyj numeru kadencji i posiedzenia z konfiguracji
+            url = f"https://api.sejm.gov.pl/sejm/term{SEJM_TERM}/votings/{CURRENT_PROCEEDING}"
             
-            response = requests.get(url, params=params, timeout=30)
+            self.stdout.write(f'Pobieranie głosowań z API Sejmu...')
+            self.stdout.write(f'URL: {url}')
+            
+            headers = {"Accept": "application/json"}
+            response = requests.get(url, headers=headers, timeout=30)
             response.raise_for_status()
             
-            prints = response.json()
-            self.stdout.write(f'Znaleziono {len(prints)} druków w API Sejmu')
+            votings = response.json()
             
-            # Filtruj druki według daty (dzień bieżący + dzień poprzedni)
-            filtered_prints = []
-            from datetime import datetime, timedelta
-            today = datetime.now().date()  # Dzisiejszy dzień
-            yesterday = today - timedelta(days=1)  # Dzień poprzedni
+            if not votings:
+                self.stdout.write(self.style.WARNING(f'Brak głosowań dla posiedzenia {CURRENT_PROCEEDING}'))
+                return bills_data
             
-            # Debug: wyświetl daty druków
-            self.stdout.write('=== DEBUG: DATY DRUKÓW ===')
-            for i, print_item in enumerate(prints[:5]):
-                delivery_date = print_item.get('deliveryDate', '')
-                document_date = print_item.get('documentDate', '')
-                self.stdout.write(f'{i+1}. Delivery: {delivery_date}, Document: {document_date}, Tytuł: {print_item.get("title", "")[:50]}...')
+            self.stdout.write(f'Znaleziono {len(votings)} głosowań')
             
-            for print_item in prints:
+            # Przetwórz każde głosowanie na projekt ustawy
+            for i, voting in enumerate(votings[:limit]):
                 try:
-                    # Sprawdź datę dostarczenia lub datę dokumentu
-                    delivery_date = print_item.get('deliveryDate', '')
-                    document_date = print_item.get('documentDate', '')
-                    
-                    # Użyj daty dostarczenia, jeśli dostępna, w przeciwnym razie daty dokumentu
-                    date_to_check = delivery_date if delivery_date else document_date
-                    
-                    if date_to_check:
-                        try:
-                            if 'T' in date_to_check:
-                                date_obj = datetime.fromisoformat(date_to_check.replace('Z', '+00:00'))
-                            else:
-                                date_obj = datetime.strptime(date_to_check, '%Y-%m-%d')
-                            
-                            # Filtruj druki z dnia bieżącego + dnia poprzedniego
-                            if date_obj.date() == today or date_obj.date() == yesterday:
-                                filtered_prints.append(print_item)
-                        except:
-                            # Jeśli nie można sparsować daty, dodaj druk
-                            filtered_prints.append(print_item)
-                    else:
-                        # Jeśli brak daty, pomiń druk (nie dodawaj)
-                        pass
-                except:
-                    # Jeśli błąd, pomiń druk (nie dodawaj)
-                    pass
-            
-            self.stdout.write(f'Po filtrowaniu daty: {len(filtered_prints)} druków z dnia bieżącego ({today}) + dnia poprzedniego ({yesterday})')
-            
-            for i, print_item in enumerate(filtered_prints[:limit]):
-                try:
-                    bill_data = self.fetch_sejm_print_details(term, print_item)
+                    bill_data = self.process_voting_data(voting, SEJM_TERM, CURRENT_PROCEEDING)
                     if bill_data:
                         bills_data.append(bill_data)
-                        self.stdout.write(f'Pobrano z API Sejmu {i+1}/{min(limit, len(filtered_prints))}: {bill_data["title"][:50]}...')
+                        self.stdout.write(
+                            f'✓ Przetworzono głosowanie {i+1}/{min(limit, len(votings))}: '
+                            f'{bill_data["title"][:60]}...'
+                        )
                 except Exception as e:
-                    self.stdout.write(self.style.WARNING(f'Błąd pobierania druku {print_item.get("number", "unknown")}: {str(e)}'))
+                    self.stdout.write(
+                        self.style.WARNING(
+                            f'Błąd przetwarzania głosowania nr {voting.get("votingNumber", "?")}: {str(e)}'
+                        )
+                    )
                     continue
-                    
-        except Exception as e:
-            self.stdout.write(self.style.ERROR(f'Błąd połączenia z API Sejmu: {str(e)}'))
             
+        except requests.exceptions.RequestException as e:
+            self.stdout.write(self.style.ERROR(f'Błąd połączenia z API Sejmu: {str(e)}'))
+        except Exception as e:
+            self.stdout.write(self.style.ERROR(f'Błąd pobierania danych: {str(e)}'))
+            import traceback
+            self.stdout.write(traceback.format_exc())
+        
         return bills_data
 
-    def parse_pdf_content(self, pdf_content):
-        """Parsuje zawartość PDF do tekstu z obsługą OCR dla skanowanych dokumentów"""
+    def process_voting_data(self, voting, term, proceeding):
+        """
+        Przetwarza dane głosowania z API na format projektu ustawy
+        
+        Kluczowe pola z API:
+        - date: data i godzina głosowania
+        - links: linki do PDF
+        - title: tytuł
+        - topic: opis
+        - totalVoted: ilu posłów głosowało
+        - votingNumber: numer głosowania
+        - yes, no, abstain, notParticipating: wyniki głosowania
+        - majorityVotes, majorityType: informacje o większości
+        """
         try:
-            import io
-            import pdfplumber
+            # Wyciągnij dane z głosowania
+            voting_date = voting.get('date', '')  # Format: "2025-10-15T10:11:50"
+            voting_number = voting.get('votingNumber', '')
+            title = voting.get('title', 'Głosowanie bez tytułu')
+            topic = voting.get('topic', '')
             
-            with pdfplumber.open(io.BytesIO(pdf_content)) as pdf:
-                text = ""
-                pages_with_text = 0
-                total_pages = len(pdf.pages)
-                
-                # Spróbuj wyciągnąć tekst z każdej strony
-                for i, page in enumerate(pdf.pages):
-                    page_text = page.extract_text()
-                    if page_text and page_text.strip():
-                        text += page_text + "\n"
-                        pages_with_text += 1
-                
-                # Jeśli mniej niż 10% stron ma tekst, prawdopodobnie to skan
-                if pages_with_text < total_pages * 0.1 and total_pages > 5:
-                    self.stdout.write(f'PDF prawdopodobnie skanowany ({pages_with_text}/{total_pages} stron z tekstem) - próba OCR...')
-                    return self.parse_pdf_with_ocr(pdf_content)
-                
-                return text.strip() if text.strip() else None
+            # Wyniki głosowania
+            total_voted = voting.get('totalVoted', 0)
+            yes_votes = voting.get('yes', 0)
+            no_votes = voting.get('no', 0)
+            abstain_votes = voting.get('abstain', 0)
+            not_participating = voting.get('notParticipating', 0)
+            majority_votes = voting.get('majorityVotes', 0)
+            majority_type = voting.get('majorityType', '')
             
-        except ImportError:
-            self.stdout.write("pdfplumber nie jest zainstalowany. Instaluję...")
-            import subprocess
-            subprocess.check_call(["pip", "install", "pdfplumber"])
-            return self.parse_pdf_content(pdf_content)
-        except Exception as e:
-            self.stdout.write(f'Błąd parsowania PDF: {str(e)}')
-            return None
-    
-    def parse_pdf_with_ocr(self, pdf_content):
-        """Parsuje skanowany PDF używając OCR"""
-        try:
-            from pdf2image import convert_from_bytes
-            import pytesseract
-            from PIL import Image
+            # Link do PDF
+            pdf_link = None
+            links = voting.get('links', [])
+            for link in links:
+                if link.get('rel') == 'pdf':
+                    pdf_link = link.get('href', '')
+                    break
             
-            # Konwertuj PDF na obrazy
-            images = convert_from_bytes(pdf_content, first_page=1, last_page=5)  # Pierwsze 5 stron
-            
-            text = ""
-            for i, image in enumerate(images):
+            # Parsuj datę
+            submission_date = None
+            if voting_date:
                 try:
-                    # Użyj OCR do wyciągnięcia tekstu z obrazu
-                    page_text = pytesseract.image_to_string(image, lang='pol')
-                    if page_text.strip():
-                        text += page_text + "\n"
-                        self.stdout.write(f'OCR strona {i+1}: {len(page_text)} znaków')
-                except Exception as e:
-                    self.stdout.write(f'Błąd OCR dla strony {i+1}: {str(e)}')
-            
-            return text.strip() if text.strip() else None
-            
-        except ImportError as e:
-            self.stdout.write(f'OCR nie jest dostępny: {str(e)}')
-            return None
-        except Exception as e:
-            self.stdout.write(f'Błąd OCR: {str(e)}')
-            return None
-
-    def parse_docx_content(self, docx_content):
-        """Parsuje zawartość DOCX do tekstu"""
-        try:
-            import io
-            from docx import Document
-            
-            doc = Document(io.BytesIO(docx_content))
-            text = ""
-            
-            for paragraph in doc.paragraphs:
-                text += paragraph.text + "\n"
-            
-            return text.strip() if text.strip() else None
-            
-        except ImportError:
-            self.stdout.write("python-docx nie jest zainstalowany. Instaluję...")
-            import subprocess
-            subprocess.check_call(["pip", "install", "python-docx"])
-            return self.parse_docx_content(docx_content)
-        except Exception as e:
-            self.stdout.write(f'Błąd parsowania DOCX: {str(e)}')
-            return None
-
-    def extract_full_text_from_pdf_url(self, pdf_url, print_number):
-        """Pobiera pełny tekst z PDF URL"""
-        try:
-            response = requests.get(pdf_url, timeout=30)
-            if response.status_code == 200:
-                # Tutaj można dodać parsowanie PDF (np. PyPDF2)
-                self.stdout.write(f'Pobrano PDF z URL: {pdf_url} ({len(response.content)} bajtów)')
-                # Na razie zwracamy informację o pobraniu
-                return f"[PDF pobrany: {len(response.content)} bajtów]"
+                    # Format: "2025-10-15T10:11:50"
+                    submission_date = datetime.fromisoformat(voting_date).date()
+                except:
+                    submission_date = timezone.now().date()
             else:
-                self.stdout.write(f'Błąd pobierania PDF z URL {pdf_url}: HTTP {response.status_code}')
-                return None
-        except Exception as e:
-            self.stdout.write(f'Błąd pobierania PDF z URL {pdf_url}: {str(e)}')
-            return None
-
-    def fetch_full_text_from_sejm_api(self, print_number):
-        """Pobiera pełny tekst z API Sejmu"""
-        try:
-            # Spróbuj pobrać pełny tekst z endpointu /prints/{id}/text
-            text_url = f"https://api.sejm.gov.pl/sejm/term10/prints/{print_number}/text"
-            response = requests.get(text_url, timeout=30)
+                submission_date = timezone.now().date()
             
-            if response.status_code == 200:
-                return response.text
-            else:
-                self.stdout.write(f'Brak pełnego tekstu w API dla druku {print_number}')
-                return None
-                
-        except Exception as e:
-            self.stdout.write(f'Błąd pobierania pełnego tekstu z API: {str(e)}')
-            return None
-
-    def extract_full_text_from_attachments(self, term, print_number, attachments):
-        """Pobiera pełny tekst z załączników używając API Sejmu"""
-        try:
-            full_text = ""
-            attachment_files = []
+            # Utwórz unikalny ID
+            sejm_id = f"term{term}_proc{proceeding}_vote{voting_number}"
             
-            for attachment in attachments:
-                if isinstance(attachment, dict):
-                    # Nowa struktura API z title i url
-                    title = attachment.get('title', '')
-                    url = attachment.get('url', '')
-                    file_name = title
-                else:
-                    # Stara struktura API (tylko nazwa pliku)
-                    file_name = attachment
-                
-                # Określ typ pliku na podstawie nazwy
-                file_type = 'unknown'
-                if file_name.endswith('.pdf') or 'pdf' in file_name.lower():
-                    file_type = 'pdf'
-                elif file_name.endswith('.docx') or 'docx' in file_name.lower():
-                    file_type = 'docx'
-                elif file_name.endswith('.doc') or 'doc' in file_name.lower():
-                    file_type = 'doc'
-                
-                # Użyj endpointu API Sejmu dla załączników
-                api_url = f"https://api.sejm.gov.pl/sejm/term{term}/prints/{print_number}/{file_name}"
-                
-                try:
-                    response = requests.get(api_url, timeout=30)
-                    if response.status_code == 200:
-                        # Sprawdź typ zawartości
-                        content_type = response.headers.get('content-type', '').lower()
-                        
-                        if 'pdf' in content_type or file_type == 'pdf':
-                            # Parsuj PDF
-                            pdf_text = self.parse_pdf_content(response.content)
-                            if pdf_text:
-                                full_text += pdf_text + "\n\n"
-                                attachment_files.append({
-                                    'name': file_name,
-                                    'type': file_type,
-                                    'url': api_url,
-                                    'size': len(response.content),
-                                    'content': pdf_text[:500]  # Pierwsze 500 znaków jako podgląd
-                                })
-                                self.stdout.write(f'Pobrano i sparsowano PDF: {file_name} ({len(response.content)} bajtów, {len(pdf_text)} znaków tekstu)')
-                            else:
-                                self.stdout.write(f'Pobrano PDF: {file_name} ({len(response.content)} bajtów) - brak tekstu')
-                                attachment_files.append({
-                                    'name': file_name,
-                                    'type': file_type,
-                                    'url': api_url,
-                                    'size': len(response.content),
-                                    'content': ''
-                                })
-                        elif 'word' in content_type or file_type in ['docx', 'doc']:
-                            # Parsuj DOCX
-                            docx_text = self.parse_docx_content(response.content)
-                            if docx_text:
-                                full_text += docx_text + "\n\n"
-                                attachment_files.append({
-                                    'name': file_name,
-                                    'type': file_type,
-                                    'url': api_url,
-                                    'size': len(response.content),
-                                    'content': docx_text[:500]  # Pierwsze 500 znaków jako podgląd
-                                })
-                                self.stdout.write(f'Pobrano i sparsowano DOCX: {file_name} ({len(response.content)} bajtów, {len(docx_text)} znaków tekstu)')
-                            else:
-                                self.stdout.write(f'Pobrano DOCX: {file_name} ({len(response.content)} bajtów) - brak tekstu')
-                                attachment_files.append({
-                                    'name': file_name,
-                                    'type': file_type,
-                                    'url': api_url,
-                                    'size': len(response.content),
-                                    'content': ''
-                                })
-                        else:
-                            self.stdout.write(f'Pobrano: {file_name} ({len(response.content)} bajtów) - nieznany typ zawartości: {content_type}')
-                            attachment_files.append({
-                                'name': file_name,
-                                'type': file_type,
-                                'url': api_url,
-                                'size': len(response.content),
-                                'content': ''
-                            })
-                    else:
-                        self.stdout.write(f'Błąd pobierania {file_name} z API Sejmu: HTTP {response.status_code}')
-                        # Dodaj załącznik z informacją o błędzie
-                        attachment_files.append({
-                            'name': file_name,
-                            'type': file_type,
-                            'url': api_url,
-                            'size': 0,
-                            'content': ''
-                        })
-                except Exception as e:
-                    self.stdout.write(f'Błąd pobierania {file_name} z API Sejmu: {str(e)}')
-                    # Dodaj załącznik z informacją o błędzie
-                    attachment_files.append({
-                        'name': file_name,
-                        'type': file_type,
-                        'url': api_url,
-                        'size': 0,
-                        'content': ''
-                    })
+            # Przygotuj dane głosowania do zapisu w JSONField
+            voting_results = {
+                'total_voted': total_voted,
+                'za': yes_votes,
+                'przeciw': no_votes,
+                'wstrzymali': abstain_votes,
+                'nie_glosowalo': not_participating,
+                'majority_votes': majority_votes,
+                'majority_type': majority_type
+            }
             
-            return full_text if full_text else None, attachment_files
-            
-        except Exception as e:
-            self.stdout.write(f'Błąd przetwarzania załączników: {str(e)}')
-            return None, []
-
-    def fetch_sejm_print_details(self, term, print_item):
-        """Pobiera szczegóły druku z API Sejmu"""
-        try:
-            print_number = print_item.get('number')
-            if not print_number:
-                return None
-                
-            # Pobierz szczegóły druku
-            details_url = f"https://api.sejm.gov.pl/sejm/term{term}/prints/{print_number}"
-            response = requests.get(details_url, timeout=30)
-            response.raise_for_status()
-            
-            details = response.json()
-            
-            # Pobierz etapy z procesu jeśli dostępny
-            process_prints = details.get('processPrint', [])
-            if process_prints:
-                try:
-                    process_id = process_prints[0]
-                    process_url = f"https://api.sejm.gov.pl/sejm/term{term}/processes/{process_id}"
-                    process_response = requests.get(process_url, timeout=30)
-                    if process_response.status_code == 200:
-                        process_data = process_response.json()
-                        details['stages'] = process_data.get('stages', [])
-                        self.stdout.write(f'Pobrano {len(details["stages"])} etapów dla procesu {process_id}')
-                except Exception as e:
-                    self.stdout.write(f'Błąd pobierania etapów dla procesu {process_prints[0]}: {str(e)}')
-                    details['stages'] = []
-            
-            # Określ typ projektu na podstawie tytułu
-            title = details.get('title', '')
-            project_type = self.determine_project_type(title)
-            
-            # Debug: wyświetl dostępne pola
-            self.stdout.write(f'=== DEBUG: DOSTĘPNE POLA DLA DRUKU {print_number} ===')
-            for key, value in details.items():
-                if isinstance(value, str) and len(value) > 100:
-                    self.stdout.write(f'{key}: {value[:100]}...')
-                elif isinstance(value, list):
-                    self.stdout.write(f'{key}: [lista z {len(value)} elementami]')
-                    # Sprawdź szczegóły listy
-                    if key == 'attachments' and value:
-                        for i, item in enumerate(value):
-                            if isinstance(item, dict):
-                                self.stdout.write(f'  - {i+1}: {item.get("title", "Brak tytułu")} - {item.get("url", "Brak URL")}')
-                            else:
-                                self.stdout.write(f'  - {i+1}: {item}')
-                elif isinstance(value, dict):
-                    self.stdout.write(f'{key}: [słownik z {len(value)} kluczami]')
-                    # Sprawdź szczegóły słownika
-                    for sub_key, sub_value in value.items():
-                        if isinstance(sub_value, str) and len(sub_value) > 50:
-                            self.stdout.write(f'  - {sub_key}: {sub_value[:50]}...')
-                        else:
-                            self.stdout.write(f'  - {sub_key}: {sub_value}')
-                else:
-                    self.stdout.write(f'{key}: {value}')
-            
-            # Sprawdź załączniki
-            attachments = details.get('attachments', [])
-            if attachments:
-                self.stdout.write(f'=== ZAŁĄCZNIKI ({len(attachments)}): ===')
-                for i, attachment in enumerate(attachments):
-                    self.stdout.write(f'Załącznik {i+1}: {attachment}')
-            
-            # Sprawdź procesy
-            process_prints = details.get('processPrint', [])
-            if process_prints:
-                self.stdout.write(f'=== PROCESY ({len(process_prints)}): ===')
-                for i, process in enumerate(process_prints):
-                    self.stdout.write(f'Proces {i+1}: {process}')
-            
-            # Pobierz pełny tekst z załączników
-            full_text, attachment_files = self.extract_full_text_from_attachments(term, print_number, attachments)
-            if full_text:
-                self.stdout.write(f'=== PEŁNY TEKST Z ZAŁĄCZNIKÓW ({len(full_text)} znaków): ===')
-                self.stdout.write(f'{full_text[:200]}...')
-                self.stdout.write(f'=== ZAŁĄCZNIKI ({len(attachment_files)}): ===')
-                for file in attachment_files:
-                    self.stdout.write(f'- {file["name"]} ({file["type"]}, {file["size"]} bajtów)')
-            else:
-                self.stdout.write('=== BRAK PEŁNEGO TEKSTU W ZAŁĄCZNIKACH ===')
+            # Przygotuj załączniki (PDF)
+            attachments = []
+            if pdf_link:
+                attachments.append({
+                    'type': 'pdf',
+                    'url': pdf_link,
+                    'name': f'Głosowanie {voting_number} - PDF'
+                })
             
             return {
-                'sejm_id': print_number,
+                'sejm_id': sejm_id,
                 'title': title,
-                'title_final': details.get('titleFinal', ''),
-                'description': details.get('description', ''),
-                'full_text': full_text,  # Pełny tekst z załączników
-                'attachments': attachments,  # Lista załączników
-                'attachment_files': attachment_files,  # Przechowywane pliki załączników
-                'status': self.determine_sejm_status(details),
-                'submission_date': self.parse_sejm_date(details.get('deliveryDate') or details.get('documentDate')),
-                'authors': self.extract_sejm_authors(details),
-                'source_url': details.get('address', ''),
-                'stages': details.get('stages', []),
-                'passed': details.get('passed', False),
-                'document_type': details.get('documentType', ''),
-                'eli': details.get('ELI', ''),
-                'voting_data': self.extract_voting_data(details),
-                'project_type': project_type,
-                'api_data': details,  # Pełne dane z API
+                'description': topic,
+                'submission_date': submission_date,
+                'status': 'Zakończone',
+                'authors': f'Sejm RP - Posiedzenie {proceeding}',
+                'project_type': 'sejm_voting',
+                'source_url': f"https://www.sejm.gov.pl/sejm{term}.nsf/agent.xsp?symbol=glosowania&NrKadencji={term}&NrPosiedzenia={proceeding}&NrGlosowania={voting_number}",
+                'number': f"Głosowanie nr {voting_number}",
+                'tags': self.generate_tags_from_title(title),
+                'voting_date': voting_date,
+                'voting_number': str(voting_number),
+                'session_number': str(proceeding),
+                'voting_topic': topic,
+                'voting_results': voting_results,
+                'attachments': attachments if attachments else None,
+                'api_data': voting  # Zapisz pełne dane z API dla przyszłych potrzeb
             }
             
         except Exception as e:
-            self.stdout.write(self.style.WARNING(f'Błąd pobierania szczegółów druku {print_number}: {str(e)}'))
+            self.stdout.write(self.style.WARNING(f'Błąd przetwarzania danych głosowania: {str(e)}'))
             return None
-
-    def fetch_sejm_bill_details(self, term, process):
-        """Pobiera szczegóły projektu z API Sejmu"""
-        try:
-            process_id = process.get('number')
-            if not process_id:
-                return None
-                
-            details_url = f"https://api.sejm.gov.pl/sejm/term{term}/processes/{process_id}"
-            response = requests.get(details_url, timeout=30)
-            response.raise_for_status()
-            
-            details = response.json()
-            
-            # Określ typ projektu na podstawie tytułu
-            title = details.get('title', '')
-            project_type = self.determine_project_type(title)
-            
-            return {
-                'sejm_id': process_id,
-                'title': title,
-                'title_final': details.get('titleFinal', ''),
-                'description': details.get('description', ''),
-                'status': self.determine_sejm_status(details),
-                'submission_date': self.parse_sejm_date(details.get('processStartDate')),
-                'authors': self.extract_sejm_authors(details),
-                'source_url': details.get('address', ''),
-                'stages': details.get('stages', []),
-                'passed': details.get('passed', False),
-                'document_type': details.get('documentType', ''),
-                'eli': details.get('ELI', ''),
-                'voting_data': self.extract_voting_data(details),
-                'project_type': project_type,
-                'api_data': details,  # Pełne dane z API
-            }
-            
-        except Exception as e:
-            self.stdout.write(self.style.WARNING(f'Błąd pobierania szczegółów projektu {process_id}: {str(e)}'))
-            return None
-
-    def extract_voting_data(self, details):
-        """Wyciąga dane o głosowaniach z API Sejmu"""
-        voting_data = []
-        stages = details.get('stages', [])
-        
-        for stage in stages:
-            if stage.get('stageType') == 'SejmReading' and stage.get('children'):
-                for child in stage.get('children', []):
-                    if child.get('stageType') == 'Voting' and child.get('voting'):
-                        voting = child.get('voting', {})
-                        voting_data.append({
-                            'date': voting.get('date'),
-                            'title': voting.get('title'),
-                            'description': voting.get('description'),
-                            'yes': voting.get('yes', 0),
-                            'no': voting.get('no', 0),
-                            'abstain': voting.get('abstain', 0),
-                            'total_voted': voting.get('totalVoted', 0),
-                            'majority_type': voting.get('majorityType'),
-                            'majority_votes': voting.get('majorityVotes', 0),
-                            'sitting': voting.get('sitting'),
-                            'voting_number': voting.get('votingNumber'),
-                            'links': voting.get('links', [])
-                        })
-        
-        return voting_data
-
-
-
-
-
-    def determine_sejm_status(self, details):
-        """Określa status projektu na podstawie etapów z API Sejmu"""
-        stages = details.get('stages', [])
-        
-        if not stages:
-            # Fallback na podstawie tytułu
-            title = details.get('title', '').lower()
-            if 'sprawozdanie' in title:
-                return 'Sprawozdanie'
-            elif 'lista kandydatów' in title:
-                return 'Nominacja'
-            elif 'opinia' in title:
-                return 'Opinia'
-            else:
-                return 'W trakcie'
-        
-        # Pobierz ostatni etap
-        last_stage = stages[-1]
-        stage_name = last_stage.get('stageName', '')
-        
-        # Mapowanie etapów z API na statusy
-        stage_mapping = {
-            'Projekt wpłynął do Sejmu': 'Wpłynął do Sejmu',
-            'Skierowano do I czytania na posiedzeniu Sejmu': 'Skierowano do I czytania',
-            'Skierowano do I czytania w komisjach': 'Skierowano do I czytania',
-            'I czytanie na posiedzeniu Sejmu': 'I czytanie',
-            'I czytanie w komisjach': 'I czytanie',
-            'Praca w komisjach po I czytaniu': 'Praca w komisjach',
-            'II czytanie na posiedzeniu Sejmu': 'II czytanie',
-            'Praca w komisjach po II czytaniu': 'Praca w komisjach',
-            'III czytanie na posiedzeniu Sejmu': 'III czytanie',
-            'Stanowisko Senatu': 'Senat',
-            'Praca w komisjach nad stanowiskiem Senatu': 'Praca w komisjach',
-            'Uchwalono': 'Uchwalono',
-        }
-        
-        return stage_mapping.get(stage_name, stage_name if stage_name else 'W trakcie')
-
-    def parse_sejm_date(self, date_string):
-        """Parsuje datę z API Sejmu"""
-        if not date_string:
-            return timezone.now().date()
-        
-        try:
-            if 'T' in date_string:
-                return datetime.fromisoformat(date_string.replace('Z', '+00:00')).date()
-            else:
-                return datetime.strptime(date_string, '%Y-%m-%d').date()
-        except:
-            return timezone.now().date()
-
-    def determine_project_type(self, title):
-        """Określa typ projektu na podstawie tytułu"""
-        if not title:
-            return 'unknown'
-        
-        title_lower = title.lower()
-        
-        # Sprawdź kluczowe słowa w tytule
-        if 'obywatelski projekt' in title_lower:
-            return 'obywatelski'
-        elif 'rządowy projekt' in title_lower:
-            return 'rządowy'
-        elif 'poselski projekt' in title_lower:
-            return 'poselski'
-        elif 'senacki projekt' in title_lower:
-            return 'senacki'
-        elif 'prezydencki projekt' in title_lower:
-            return 'prezydencki'
-        else:
-            # Fallback - spróbuj wywnioskować z innych słów
-            if 'obywatel' in title_lower:
-                return 'obywatelski'
-            elif 'rządowy' in title_lower or 'rząd' in title_lower:
-                return 'rządowy'
-            elif 'poseł' in title_lower or 'poselski' in title_lower:
-                return 'poselski'
-            elif 'senat' in title_lower or 'senacki' in title_lower:
-                return 'senacki'
-            elif 'prezydent' in title_lower or 'prezydencki' in title_lower:
-                return 'prezydencki'
-            else:
-                return 'unknown'
-
-    def extract_sejm_authors(self, details):
-        """Wyciąga autorów z danych API Sejmu"""
-        # Sprawdź w opisie
-        description = details.get('description', '').lower()
-        if 'rząd' in description:
-            return 'Rząd Rzeczypospolitej Polskiej'
-        elif 'posłowie' in description:
-            return 'Grupa posłów'
-        elif 'senat' in description:
-            return 'Senat RP'
-        
-        return 'Nieznany'
-
-
-
-    def generate_tags_from_title(self, title):
-        """Generuje tagi na podstawie tytułu"""
-        try:
-            words = title.lower().split()
-            stop_words = {'o', 'i', 'w', 'z', 'na', 'do', 'od', 'przy', 'dla', 'oraz', 'lub', 'ale', 'że', 'się', 'jest', 'są', 'być', 'mieć', 'ustawa', 'projekt'}
-            keywords = [word for word in words if len(word) > 3 and word not in stop_words]
-            tags = keywords[:3]  # Ogranicz do 3 tagów
-            tags_str = ', '.join(tags)
-            
-            if len(tags_str) > 200:
-                tags_str = tags_str[:200]
-                last_comma = tags_str.rfind(',')
-                if last_comma > 0:
-                    tags_str = tags_str[:last_comma]
-            
-            return tags_str
-        except:
-            return "ustawa, sejm, legislacja"
 
     def create_or_update_bill(self, bill_data, force_update=False, ai_service=None):
-        """Tworzy lub aktualizuje projekt ustawy"""
-        try:
-            
-            # Określ źródło danych i typ projektu
-            data_source = 'sejm_api'
-            project_type = bill_data.get('project_type', 'unknown')
-            
-            # Generuj numer projektu jeśli nie istnieje
-            if not bill_data.get('number'):
-                if bill_data.get('sejm_id'):
-                    bill_data['number'] = f"SEJM/{bill_data['sejm_id']}"
-                else:
-                    # Fallback
-                    bill_data['number'] = f"SEJM/{hash(bill_data.get('title', '')) % 10000}"
-            
+        """Tworzy lub aktualizuje projekt ustawy w bazie danych"""
+        sejm_id = bill_data.get('sejm_id', '')
+        
+        # Sprawdź czy projekt już istnieje
+        if sejm_id:
             bill, created = Bill.objects.get_or_create(
-                number=bill_data['number'],
-                defaults={
-                    'title': bill_data['title'],
-                    'description': bill_data['description'],
-                    'authors': bill_data['authors'],
-                    'submission_date': bill_data['submission_date'],
-                    'status': bill_data['status'],
-                    'source_url': bill_data.get('source_url', ''),
-                    'tags': bill_data.get('tags', ''),
-                    'data_source': data_source,
-                    'project_type': project_type,
-                    'api_data': bill_data.get('api_data', {}),
-                    'sejm_id': bill_data.get('sejm_id', ''),
-                    'eli': bill_data.get('eli', ''),
-                    'document_type': bill_data.get('document_type', ''),
-                    'passed': bill_data.get('passed', False),
-                    'full_text': bill_data.get('full_text', ''),
-                    'attachments': bill_data.get('attachments', []),
-                    'attachment_files': bill_data.get('attachment_files', []),
-                }
+                sejm_id=sejm_id,
+                defaults=bill_data
             )
-            
-            if not created and force_update:
-                bill.title = bill_data['title']
-                bill.description = bill_data['description']
-                bill.authors = bill_data['authors']
-                bill.submission_date = bill_data['submission_date']
-                bill.status = bill_data['status']
-                bill.source_url = bill_data.get('source_url', '')
-                bill.tags = bill_data.get('tags', '')
-                bill.data_source = data_source
-                bill.project_type = project_type
-                bill.api_data = bill_data.get('api_data', {})
-                bill.sejm_id = bill_data.get('sejm_id', '')
-                bill.eli = bill_data.get('eli', '')
-                bill.document_type = bill_data.get('document_type', '')
-                bill.passed = bill_data.get('passed', False)
-                bill.full_text = bill_data.get('full_text', '')
-                bill.attachments = bill_data.get('attachments', [])
-                bill.attachment_files = bill_data.get('attachment_files', [])
-                bill.save()
-            
-            # Generuj analizę AI dla nowych projektów lub gdy włączono force_update
-            if ai_service and (created or force_update):
-                self._generate_ai_analysis_for_bill(bill, ai_service)
-            
-            return bill, created
-            
-        except Exception as e:
-            self.stdout.write(self.style.ERROR(f'Błąd tworzenia/aktualizacji projektu {bill_data["number"]}: {str(e)}'))
-            return None, False
-    
-    def _generate_ai_analysis_for_bill(self, bill, ai_service):
-        """Generuje analizę AI dla projektu ustawy"""
-        try:
-            # Sprawdź czy projekt ma tekst do analizy
-            if not bill.full_text and not bill.description:
-                self.stdout.write(self.style.WARNING(f'Projekt {bill.number} nie ma tekstu do analizy AI'))
-                return
-            
-            # Sprawdź czy analiza już istnieje
-            if bill.ai_analysis:
-                self.stdout.write(f'Projekt {bill.number} już ma analizę AI, pomijam...')
-                return
-            
-            self.stdout.write(f'Generuję analizę AI dla projektu {bill.number}...')
-            
-            # Wygeneruj analizę
-            analysis_result = ai_service.analyze_bill(bill)
-            
-            if 'error' in analysis_result:
-                self.stdout.write(self.style.ERROR(f'Błąd analizy AI dla {bill.number}: {analysis_result["error"]}'))
-                return
-            
-            # Zapisz analizę
-            if ai_service.save_analysis_to_bill(bill, analysis_result):
-                self.stdout.write(self.style.SUCCESS(f'Pomyślnie wygenerowano analizę AI dla {bill.number}'))
-            else:
-                self.stdout.write(self.style.ERROR(f'Błąd podczas zapisywania analizy AI dla {bill.number}'))
-                
-        except Exception as e:
-            self.stdout.write(self.style.ERROR(f'Nieoczekiwany błąd podczas generowania analizy AI dla {bill.number}: {str(e)}'))
+        else:
+            # Jeśli nie ma sejm_id, utwórz nowy
+            bill = Bill.objects.create(**bill_data)
+            created = True
+        
+        if not created and force_update:
+            # Aktualizuj istniejący projekt
+            for key, value in bill_data.items():
+                setattr(bill, key, value)
+            bill.save()
+        
+        # Generuj analizę AI jeśli włączona i projekt nowy lub nie ma analizy
+        if ai_service and (created or not bill.ai_analysis):
+            if bill.full_text:
+                self.stdout.write(f'Generuję analizę AI dla projektu: {bill.title[:50]}...')
+                try:
+                    analysis = ai_service.analyze_bill(bill.full_text, bill.title)
+                    bill.ai_analysis = analysis
+                    bill.ai_analysis_date = timezone.now()
+                    bill.save()
+                    self.stdout.write(self.style.SUCCESS('✓ Analiza AI wygenerowana'))
+                except Exception as e:
+                    self.stdout.write(self.style.WARNING(f'Błąd generowania analizy AI: {str(e)}'))
+        
+        return bill, created
+
+    def generate_tags_from_title(self, title):
+        """Generuje tagi na podstawie tytułu projektu"""
+        common_topics = {
+            'zdrowia': 'Zdrowie',
+            'oświat': 'Oświata',
+            'podatk': 'Podatki',
+            'bezpieczeńst': 'Bezpieczeństwo',
+            'transport': 'Transport',
+            'środowisk': 'Środowisko',
+            'gospod': 'Gospodarka',
+            'prac': 'Praca',
+            'emeryt': 'Emerytury',
+            'rent': 'Renty',
+            'rodzin': 'Rodzina',
+            'mieszka': 'Mieszkalnictwo',
+            'energet': 'Energetyka',
+            'cyfryz': 'Cyfryzacja',
+            'samorzą': 'Samorząd',
+        }
+        
+        tags = []
+        title_lower = title.lower()
+        
+        for keyword, tag in common_topics.items():
+            if keyword in title_lower:
+                tags.append(tag)
+        
+        return tags[:3]  # Max 3 tagi

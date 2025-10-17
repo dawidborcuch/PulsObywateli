@@ -5,6 +5,7 @@ from django_filters.rest_framework import DjangoFilterBackend
 from django.db.models import Q, Count, F
 from django.utils import timezone
 from datetime import timedelta
+import re
 
 from .models import Bill, BillVote, BillUpdate
 from .serializers import (
@@ -21,8 +22,8 @@ class BillListView(generics.ListAPIView):
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['status', 'is_active', 'is_featured']
     search_fields = ['title', 'description', 'authors', 'tags']
-    ordering_fields = ['submission_date', 'created_at', 'total_votes', 'support_votes']
-    ordering = ['-submission_date']
+    ordering_fields = ['submission_date', 'created_at', 'total_votes', 'support_votes', 'session_number', 'voting_number']
+    ordering = ['-session_number', '-voting_number']
     
     def get_queryset(self):
         queryset = Bill.objects.filter(is_active=True)
@@ -292,4 +293,131 @@ def get_ai_analysis(request, bill_id):
         'bill_id': bill.id,
         'bill_title': bill.title
     })
+
+
+@api_view(['GET'])
+@permission_classes([permissions.AllowAny])
+def get_voting_pdf_data(request, bill_id):
+    """Pobiera dane posłów z PDF-a głosowania"""
+    try:
+        bill = Bill.objects.get(id=bill_id)
+    except Bill.DoesNotExist:
+        return Response(
+            {'error': 'Projekt ustawy nie został znaleziony'}, 
+            status=status.HTTP_404_NOT_FOUND
+        )
+    
+    # Sprawdź czy są dostępne załączniki PDF
+    if not bill.attachments or len(bill.attachments) == 0:
+        return Response(
+            {'error': 'Brak dostępnych plików PDF'}, 
+            status=status.HTTP_404_NOT_FOUND
+        )
+    
+    try:
+        import requests
+        import pdfplumber
+        import io
+        import re
+        
+        # Pobierz pierwszy PDF
+        pdf_url = bill.attachments[0]['url']
+        response = requests.get(pdf_url, timeout=30)
+        response.raise_for_status()
+        
+        # Przetwórz PDF
+        pdf_data = []
+        with pdfplumber.open(io.BytesIO(response.content)) as pdf:
+            for page in pdf.pages:
+                text = page.extract_text()
+                if text:
+                    # Parsuj dane posłów
+                    deputies = parse_deputies_from_text(text)
+                    pdf_data.extend(deputies)
+        
+        # Nie sortujemy - wyświetlamy dokładnie tak jak w pliku PDF
+        
+        return Response({
+            'deputies': pdf_data,
+            'total_count': len(pdf_data),
+            'pdf_url': pdf_url
+        })
+        
+    except Exception as e:
+        return Response(
+            {'error': f'Błąd podczas przetwarzania PDF: {str(e)}'}, 
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
+def parse_deputies_from_text(text):
+    """Parsuje dane posłów z tekstu PDF"""
+    deputies = []
+    current_party = None
+    
+    lines = text.split('\n')
+    
+    for line in lines:
+        line = line.strip()
+        if not line:
+            continue
+            
+        # Sprawdź czy to nazwa partii (np. "PiS(188) GŁOSOWAŁO")
+        party_match = re.search(r'^([A-ZĄĆĘŁŃÓŚŹŻa-ząćęłńóśźż]+)\([0-9]+\)', line)
+        if party_match:
+            current_party = party_match.group(1).strip()
+            continue
+        
+        # Sprawdź czy to linia z posłami (zawiera skróty głosów)
+        if current_party and any(word in line.lower() for word in ['za', 'pr.', 'wstrzymał', 'ng.', 'nie']):
+            # Podziel linię na poszczególnych posłów
+            # Format PDF: "NAZWISKO IMIĘ skrót_głosu NAZWISKO IMIĘ skrót_głosu"
+            words = line.split()
+            i = 0
+            while i < len(words):
+                if i + 1 < len(words):
+                    # Sprawdź czy to nazwisko i imię (format PDF: NAZWISKO IMIĘ)
+                    if (words[i].isupper() and words[i+1].isupper() and 
+                        i + 2 < len(words)):
+                        
+                        last_name = words[i]  # Pierwsze słowo to zawsze NAZWISKO
+                        first_name = words[i+1]  # Drugie słowo to IMIĘ (może być pierwsze z kilku)
+                        vote_short = words[i+2].lower()
+                        
+                        # Mapuj skróty na pełne nazwy głosów
+                        if vote_short == 'za':
+                            vote = 'ZA'
+                        elif vote_short == 'pr.':
+                            vote = 'PRZECIW'
+                        elif vote_short == 'wstrzymał':
+                            vote = 'WSTRZYMAŁ'
+                        elif vote_short == 'ng.':
+                            vote = 'NIE GŁOSOWAŁ'
+                        elif vote_short == 'nie' and i + 3 < len(words) and words[i+3].lower() == 'głosował':
+                            vote = 'NIE GŁOSOWAŁ'
+                            i += 4
+                            deputies.append({
+                                'party': current_party,
+                                'first_name': first_name,
+                                'last_name': last_name,
+                                'vote': vote
+                            })
+                            continue
+                        else:
+                            i += 1
+                            continue
+                        
+                        deputies.append({
+                            'party': current_party,
+                            'first_name': first_name,
+                            'last_name': last_name,
+                            'vote': vote
+                        })
+                        i += 3
+                    else:
+                        i += 1
+                else:
+                    i += 1
+    
+    return deputies
 

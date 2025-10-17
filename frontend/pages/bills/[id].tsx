@@ -6,6 +6,8 @@ import { format } from 'date-fns'
 import { pl } from 'date-fns/locale'
 import Layout from '@/components/Layout'
 import AIAnalysis from '@/components/AIAnalysis'
+import SejmVotes from '@/components/SejmVotes'
+import VotingDeputies from '@/components/VotingDeputies'
 import { useAuth } from '@/contexts/AuthContext'
 import api from '@/lib/api'
 import { 
@@ -393,38 +395,11 @@ export default function BillDetailPage() {
             </div>
 
             <div className="flex items-center space-x-3 mb-4">
-              <span className={`px-3 py-1 rounded-full text-sm font-medium ${getProjectTypeColor(bill.project_type)}`}>
-                {getProjectTypeText(bill.project_type)}
-              </span>
               <span className="text-sm text-gray-500 dark:text-gray-400">
                 {bill.number}
               </span>
             </div>
             
-            {/* Pasek postępu legislacyjnego */}
-            <div className="mb-6">
-              <div className="flex items-center justify-between text-sm text-gray-600 dark:text-gray-400 mb-3">
-                <span>Etap legislacyjny</span>
-                <span className="font-medium text-lg">{getStatusText(bill.status)}</span>
-              </div>
-              <div className="relative">
-                <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3">
-                  <div 
-                    className={`h-3 rounded-full transition-all duration-700 ${getLegislativeProgressColor(bill.status)}`}
-                    style={{ width: `${getLegislativeProgress(bill.status)}%` }}
-                  ></div>
-                </div>
-                {/* Etapy legislacyjne */}
-                <div className="flex justify-between mt-3 text-sm text-gray-500 dark:text-gray-400">
-                  <span className={getStageActiveClass(bill.status, 'Wpłynął do Sejmu')}>Wpłynął</span>
-                  <span className={getStageActiveClass(bill.status, 'I czytanie')}>I czytanie</span>
-                  <span className={getStageActiveClass(bill.status, 'II czytanie')}>II czytanie</span>
-                  <span className={getStageActiveClass(bill.status, 'III czytanie')}>III czytanie</span>
-                  <span className={getStageActiveClass(bill.status, 'Senat')}>Senat</span>
-                  <span className={getStageActiveClass(bill.status, 'Uchwalono')}>Uchwalono</span>
-                </div>
-              </div>
-            </div>
 
             <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">
               {bill.title}
@@ -449,7 +424,7 @@ export default function BillDetailPage() {
           {/* Opis */}
           <div className="card p-6 mb-8">
             <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
-              Opis projektu
+              Opis
             </h2>
             <p className="text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
               {bill.description}
@@ -473,6 +448,52 @@ export default function BillDetailPage() {
           {/* Analiza AI */}
           <div className="mb-8">
             <AIAnalysis billId={bill.id} billTitle={bill.title} />
+          </div>
+
+          {/* PDF projektu ustawy */}
+          {bill.attachments && bill.attachments.length > 0 && (
+            <div className="card p-6 mb-8">
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
+                <DocumentIcon className="h-5 w-5 inline mr-2" />
+                Zestawienie głosowania (PDF)
+              </h2>
+              <div className="space-y-4">
+                {bill.attachments.map((attachment, index) => (
+                  <div key={index} className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 bg-gray-50 dark:bg-gray-800">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-3">
+                        <DocumentIcon className="h-8 w-8 text-red-600" />
+                        <div>
+                          <p className="text-sm font-medium text-gray-900 dark:text-white">
+                            {attachment.name}
+                          </p>
+                          <p className="text-xs text-gray-500 dark:text-gray-400">
+                            Dokument PDF
+                          </p>
+                        </div>
+                      </div>
+                      <a
+                        href={attachment.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                      >
+                        <ArrowDownTrayIcon className="h-4 w-4 mr-2" />
+                        Pobierz PDF
+                      </a>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              
+              {/* Dane posłów z PDF */}
+              <VotingDeputies billId={bill.id} />
+            </div>
+          )}
+
+          {/* Głosowania w Sejmie */}
+          <div className="mb-8">
+            <SejmVotes billId={bill.id} billTitle={bill.title} />
           </div>
 
           {/* Pełny tekst projektu */}
