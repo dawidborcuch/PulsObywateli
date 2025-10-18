@@ -295,7 +295,7 @@ class AIAnalysisService:
             logger.error(f"Błąd OCR dla druku {print_number}: {str(e)}")
             return None
     
-    def _smart_text_shortening(self, text, max_length=8000):
+    def _smart_text_shortening(self, text, max_length=100000):
         """Inteligentne skracanie tekstu zachowując kluczowe fragmenty"""
         if len(text) <= max_length:
             return text
@@ -336,7 +336,7 @@ class AIAnalysisService:
         # Połącz kluczowe sekcje
         combined = '\n\n'.join(key_sections[:5])  # Maksymalnie 5 sekcji
         
-        return combined[:8000]  # Ogranicz do 8000 znaków
+        return combined[:100000]  # Ogranicz do 100000 znaków
     
     def _proportional_shortening(self, text, max_length):
         """Proporcjonalne skracanie zachowując strukturę"""
