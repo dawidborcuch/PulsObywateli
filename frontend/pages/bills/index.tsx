@@ -6,7 +6,7 @@ import { useQuery } from 'react-query'
 import api from '@/lib/api'
 import { format } from 'date-fns'
 import { pl } from 'date-fns/locale'
-import { MagnifyingGlassIcon, FunnelIcon, ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/outline'
+import { ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/outline'
 
 interface Bill {
   id: number
@@ -45,18 +45,14 @@ interface Bill {
 }
 
 export default function BillsPage() {
-  const [searchTerm, setSearchTerm] = useState('')
-  const [statusFilter, setStatusFilter] = useState('')
   const [sortBy, setSortBy] = useState('-session_number,-voting_number')
   const [currentPage, setCurrentPage] = useState(1)
 
   const { data: billsData, isLoading, error } = useQuery(
-    ['bills', searchTerm, statusFilter, sortBy, currentPage],
+    ['bills', sortBy, currentPage],
     async () => {
       try {
         const params = new URLSearchParams()
-        if (searchTerm) params.append('search', searchTerm)
-        if (statusFilter) params.append('status', statusFilter)
         if (sortBy) params.append('ordering', sortBy)
         params.append('page', currentPage.toString())
         
@@ -73,59 +69,7 @@ export default function BillsPage() {
   const bills = billsData?.results || billsData || []
   const pagination = billsData?.pagination || null
 
-  const getStatusColor = (status: string) => {
-    const statusColors: { [key: string]: string } = {
-      'draft': 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200',
-      'submitted': 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
-      'in_committee': 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
-      'first_reading': 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200',
-      'second_reading': 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200',
-      'third_reading': 'bg-pink-100 text-pink-800 dark:bg-pink-900 dark:text-pink-200',
-      'passed': 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
-      'rejected': 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
-      'withdrawn': 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200',
-      'I czytanie': 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
-      'II czytanie': 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200',
-      'III czytanie': 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200',
-      'Senat': 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200',
-      'Sprawozdanie': 'bg-cyan-100 text-cyan-800 dark:bg-cyan-900 dark:text-cyan-200',
-      'Nominacja': 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200',
-      'Opinia': 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200',
-      'W trakcie': 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200',
-      'Wpłynął do Sejmu': 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
-      'Skierowano do I czytania': 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200',
-      'Praca w komisjach': 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
-      'Uchwalono': 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
-    }
-    return statusColors[status] || 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200'
-  }
 
-  const getStatusText = (status: string) => {
-    const statusTexts: { [key: string]: string } = {
-      'draft': 'Projekt',
-      'submitted': 'Złożony',
-      'in_committee': 'W komisji',
-      'first_reading': 'Pierwsze czytanie',
-      'second_reading': 'Drugie czytanie',
-      'third_reading': 'Trzecie czytanie',
-      'passed': 'Przyjęty',
-      'rejected': 'Odrzucony',
-      'withdrawn': 'Wycofany',
-      'I czytanie': 'I czytanie',
-      'II czytanie': 'II czytanie',
-      'III czytanie': 'III czytanie',
-      'Senat': 'Senat',
-      'Sprawozdanie': 'Sprawozdanie',
-      'Nominacja': 'Nominacja',
-      'Opinia': 'Opinia',
-      'W trakcie': 'W trakcie',
-      'Wpłynął do Sejmu': 'Wpłynął do Sejmu',
-      'Skierowano do I czytania': 'Skierowano do I czytania',
-      'Praca w komisjach': 'Praca w komisjach',
-      'Uchwalono': 'Uchwalono',
-    }
-    return statusTexts[status] || status
-  }
 
   if (error) {
     return (
@@ -162,54 +106,23 @@ export default function BillsPage() {
             </p>
           </div>
 
-          {/* Filtry i wyszukiwanie */}
+          {/* Sortowanie */}
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6 mb-8">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="relative">
-                <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-                <input
-                  type="text"
-                  placeholder="Szukaj projektów..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
-                />
-              </div>
-              
-              <div className="relative">
-                <FunnelIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-                <select
-                  value={statusFilter}
-                  onChange={(e) => setStatusFilter(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
-                >
-                  <option value="">Wszystkie statusy</option>
-                  <option value="Wpłynął do Sejmu">Wpłynął do Sejmu</option>
-                  <option value="Skierowano do I czytania">Skierowano do I czytania</option>
-                  <option value="I czytanie">I czytanie</option>
-                  <option value="Praca w komisjach">Praca w komisjach</option>
-                  <option value="II czytanie">II czytanie</option>
-                  <option value="III czytanie">III czytanie</option>
-                  <option value="Senat">Senat</option>
-                  <option value="Uchwalono">Uchwalono</option>
-                  <option value="Sprawozdanie">Sprawozdanie</option>
-                  <option value="Nominacja">Nominacja</option>
-                  <option value="Opinia">Opinia</option>
-                  <option value="W trakcie">W trakcie</option>
-                </select>
-              </div>
-              
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+                Sortowanie
+              </h2>
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+                className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
               >
                 <option value="-session_number,-voting_number">Najnowsze głosowania</option>
                 <option value="session_number,voting_number">Najstarsze głosowania</option>
-                <option value="-submission_date">Najnowsze projekty</option>
-                <option value="submission_date">Najstarsze projekty</option>
-                <option value="-total_votes">Najpopularniejsze</option>
-                <option value="-support_votes">Najbardziej popierane</option>
+                <option value="-voting_date">Najnowsza data głosowania</option>
+                <option value="voting_date">Najstarsza data głosowania</option>
+                <option value="-created_at">Najnowsze dodane</option>
+                <option value="created_at">Najstarsze dodane</option>
               </select>
             </div>
           </div>
