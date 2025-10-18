@@ -70,7 +70,15 @@ export default function SejmVotes({ billId, billTitle }: SejmVotesProps) {
 
   const formatDate = (dateString: string) => {
     if (!dateString) return 'Brak danych'
-    return dateString // Data już w formacie polskim
+    // Konwertuj format ISO na format YYYY-MM-DD HH:MM:SS
+    const date = new Date(dateString)
+    const year = date.getFullYear()
+    const month = String(date.getMonth() + 1).padStart(2, '0')
+    const day = String(date.getDate()).padStart(2, '0')
+    const hours = String(date.getHours()).padStart(2, '0')
+    const minutes = String(date.getMinutes()).padStart(2, '0')
+    const seconds = String(date.getSeconds()).padStart(2, '0')
+    return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`
   }
 
   if (isLoading) {
@@ -132,36 +140,67 @@ export default function SejmVotes({ billId, billTitle }: SejmVotesProps) {
               {votesData.voting_topic}
             </h3>
             <p className="text-sm text-gray-600 dark:text-gray-400">
-              {formatDate(votesData.voting_date)} o {votesData.voting_time}
+              {formatDate(votesData.voting_date)}
             </p>
           </div>
 
           {/* Wyniki głosowania */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-            <div className="text-center">
-              <div className="text-2xl font-bold text-green-600 dark:text-green-400">
-                {votesData.voting_results?.za || 0}
-              </div>
-              <div className="text-sm text-gray-600 dark:text-gray-400">Za</div>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-red-600 dark:text-red-400">
-                {votesData.voting_results?.przeciw || 0}
-              </div>
-              <div className="text-sm text-gray-600 dark:text-gray-400">Przeciw</div>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-yellow-600 dark:text-yellow-400">
-                {votesData.voting_results?.wstrzymali || 0}
-              </div>
-              <div className="text-sm text-gray-600 dark:text-gray-400">Wstrzymało się</div>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-gray-600 dark:text-gray-400">
-                {votesData.voting_results?.nie_glosowalo || 0}
-              </div>
-              <div className="text-sm text-gray-600 dark:text-gray-400">Nie głosowało</div>
-            </div>
+            {(votesData.voting_topic?.toLowerCase().includes('kworum') || votesData.voting_topic?.toLowerCase().includes('kworum')) ? (
+              <>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+                    {(votesData.voting_results?.total_voted || 0) - (votesData.voting_results?.nie_glosowalo || 0)}
+                  </div>
+                  <div className="text-sm text-gray-600 dark:text-gray-400">Obecny</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-yellow-600 dark:text-yellow-400">
+                    {votesData.voting_results?.nie_glosowalo || 0}
+                  </div>
+                  <div className="text-sm text-gray-600 dark:text-gray-400">Nie głosował</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-gray-500 dark:text-gray-500">
+                    {votesData.voting_results?.total_voted || 0}
+                  </div>
+                  <div className="text-sm text-gray-600 dark:text-gray-400">Łącznie</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-gray-400 dark:text-gray-500">
+                    -
+                  </div>
+                  <div className="text-sm text-gray-600 dark:text-gray-400">-</div>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-green-600 dark:text-green-400">
+                    {votesData.voting_results?.za || 0}
+                  </div>
+                  <div className="text-sm text-gray-600 dark:text-gray-400">Za</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-red-600 dark:text-red-400">
+                    {votesData.voting_results?.przeciw || 0}
+                  </div>
+                  <div className="text-sm text-gray-600 dark:text-gray-400">Przeciw</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-yellow-600 dark:text-yellow-400">
+                    {votesData.voting_results?.wstrzymali || 0}
+                  </div>
+                  <div className="text-sm text-gray-600 dark:text-gray-400">Wstrzymało się</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-gray-600 dark:text-gray-400">
+                    {votesData.voting_results?.nie_glosowalo || 0}
+                  </div>
+                  <div className="text-sm text-gray-600 dark:text-gray-400">Nie głosowało</div>
+                </div>
+              </>
+            )}
           </div>
 
           {/* Wyniki według klubów */}
@@ -177,10 +216,21 @@ export default function SejmVotes({ billId, billTitle }: SejmVotesProps) {
                       <th className="text-left py-2">Klub/Koło</th>
                       <th className="text-center py-2">Członków</th>
                       <th className="text-center py-2">Głosowało</th>
-                      <th className="text-center py-2 text-green-600">Za</th>
-                      <th className="text-center py-2 text-red-600">Przeciw</th>
-                      <th className="text-center py-2 text-yellow-600">Wstrzymało</th>
-                      <th className="text-center py-2 text-gray-600">Nie głosowało</th>
+                      {(votesData.voting_topic?.toLowerCase().includes('kworum') || votesData.voting_topic?.toLowerCase().includes('kworum')) ? (
+                        <>
+                          <th className="text-center py-2 text-blue-600">Obecny</th>
+                          <th className="text-center py-2 text-yellow-600">Nie głosował</th>
+                          <th className="text-center py-2 text-gray-500">-</th>
+                          <th className="text-center py-2 text-gray-500">-</th>
+                        </>
+                      ) : (
+                        <>
+                          <th className="text-center py-2 text-green-600">Za</th>
+                          <th className="text-center py-2 text-red-600">Przeciw</th>
+                          <th className="text-center py-2 text-yellow-600">Wstrzymało</th>
+                          <th className="text-center py-2 text-gray-600">Nie głosowało</th>
+                        </>
+                      )}
                     </tr>
                   </thead>
                   <tbody>
@@ -189,10 +239,21 @@ export default function SejmVotes({ billId, billTitle }: SejmVotesProps) {
                         <td className="py-2 font-medium">{club.klub}</td>
                         <td className="py-2 text-center">{club.liczba_czlonkow}</td>
                         <td className="py-2 text-center">{club.glosowalo}</td>
-                        <td className="py-2 text-center text-green-600 font-medium">{club.za}</td>
-                        <td className="py-2 text-center text-red-600 font-medium">{club.przeciw}</td>
-                        <td className="py-2 text-center text-yellow-600 font-medium">{club.wstrzymalo_sie}</td>
-                        <td className="py-2 text-center text-gray-600 font-medium">{club.nie_glosowalo}</td>
+                        {(votesData.voting_topic?.toLowerCase().includes('kworum') || votesData.voting_topic?.toLowerCase().includes('kworum')) ? (
+                          <>
+                            <td className="py-2 text-center text-blue-600 font-medium">{club.glosowalo - club.nie_glosowalo}</td>
+                            <td className="py-2 text-center text-yellow-600 font-medium">{club.nie_glosowalo}</td>
+                            <td className="py-2 text-center text-gray-500 font-medium">-</td>
+                            <td className="py-2 text-center text-gray-500 font-medium">-</td>
+                          </>
+                        ) : (
+                          <>
+                            <td className="py-2 text-center text-green-600 font-medium">{club.za}</td>
+                            <td className="py-2 text-center text-red-600 font-medium">{club.przeciw}</td>
+                            <td className="py-2 text-center text-yellow-600 font-medium">{club.wstrzymalo_sie}</td>
+                            <td className="py-2 text-center text-yellow-600 font-medium">{club.nie_glosowalo}</td>
+                          </>
+                        )}
                       </tr>
                     ))}
                   </tbody>
