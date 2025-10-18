@@ -23,8 +23,8 @@ class Command(BaseCommand):
         parser.add_argument(
             '--limit',
             type=int,
-            default=50,
-            help='Maksymalna liczba projektów do pobrania'
+            default=None,
+            help='Maksymalna liczba projektów do pobrania (domyślnie wszystkie)'
         )
         parser.add_argument(
             '--term',
@@ -42,12 +42,18 @@ class Command(BaseCommand):
             action='store_true',
             help='Automatycznie generuj analizę AI dla nowych projektów'
         )
+        parser.add_argument(
+            '--clean-cache',
+            action='store_true',
+            help='Wyczyść stary cache OCR przed pobieraniem'
+        )
 
     def handle(self, *args, **options):
         limit = options['limit']
         term = options['term']
         force_update = options['force']
         ai_analysis_enabled = options['ai_analysis']
+        clean_cache = options['clean_cache']
         
         # Inicjalizuj serwis AI jeśli włączony
         ai_service = None
@@ -56,6 +62,16 @@ class Command(BaseCommand):
             if not ai_service.is_openai_configured():
                 self.stdout.write(self.style.WARNING('OpenAI API key nie jest skonfigurowany. Analiza AI zostanie pominięta.'))
                 ai_service = None
+        
+        # Wyczyść cache OCR jeśli żądane
+        if clean_cache:
+            from .ocr_cache import OCRCache
+            cache = OCRCache()
+            deleted_old = cache.clean_old_cache(30)  # 30 dni
+            deleted_size = cache.clean_by_size(100)  # 100 MB
+            self.stdout.write(
+                self.style.SUCCESS(f'Wyczyściono cache OCR: {deleted_old} starych + {deleted_size} z limitem rozmiaru')
+            )
         
         self.stdout.write(
             self.style.SUCCESS(f'Rozpoczynam pobieranie projektów ustaw z API Sejmu (kadencja {term})...')
@@ -113,13 +129,16 @@ class Command(BaseCommand):
             self.stdout.write(f'Znaleziono {len(votings)} głosowań')
             
             # Przetwórz każde głosowanie na projekt ustawy
-            for i, voting in enumerate(votings[:limit]):
+            votings_to_process = votings[:limit] if limit else votings
+            total_votings = len(votings_to_process)
+            
+            for i, voting in enumerate(votings_to_process):
                 try:
                     bill_data = self.process_voting_data(voting, SEJM_TERM, CURRENT_PROCEEDING)
                     if bill_data:
                         bills_data.append(bill_data)
                         self.stdout.write(
-                            f'✓ Przetworzono głosowanie {i+1}/{min(limit, len(votings))}: '
+                            f'✓ Przetworzono głosowanie {i+1}/{total_votings}: '
                             f'{bill_data["title"][:60]}...'
                         )
                 except Exception as e:
