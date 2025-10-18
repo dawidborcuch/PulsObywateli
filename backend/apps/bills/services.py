@@ -228,11 +228,19 @@ class AIAnalysisService:
             return None
     
     def _extract_text_with_ocr(self, print_number):
-        """Wyciąga tekst z PDF-a używając OCR"""
+        """Wyciąga tekst z PDF-a używając OCR z cache'owaniem"""
         try:
+            from .management.commands.ocr_cache import OCRCache
             import pytesseract
             from pdf2image import convert_from_bytes
             import requests
+            
+            # Sprawdź cache
+            cache = OCRCache()
+            cached_text = cache.get_cached_text(print_number)
+            if cached_text:
+                logger.info(f"Używam cache OCR dla druku {print_number}")
+                return cached_text
             
             # Pobierz PDF URL
             headers = {"Accept": "application/json"}
@@ -261,12 +269,27 @@ class AIAnalysisService:
             
             # Użyj OCR na wszystkich obrazach
             all_text = []
-            for image in images:
-                text = pytesseract.image_to_string(image, lang='pol')
-                if text.strip():
-                    all_text.append(text.strip())
+            for i, image in enumerate(images):
+                # Sprawdź cache dla konkretnej strony
+                page_cached = cache.get_cached_text(print_number, i)
+                if page_cached:
+                    logger.info(f"Używam cache OCR dla druku {print_number}, strona {i+1}")
+                    all_text.append(page_cached)
+                else:
+                    logger.info(f"Używam OCR dla druku {print_number}, strona {i+1}")
+                    text = pytesseract.image_to_string(image, lang='pol')
+                    if text.strip():
+                        all_text.append(text.strip())
+                        # Zapisz do cache
+                        cache.save_to_cache(print_number, text.strip(), i)
             
-            return '\n'.join(all_text) if all_text else None
+            full_text = '\n'.join(all_text) if all_text else None
+            
+            # Zapisz pełny tekst do cache
+            if full_text:
+                cache.save_to_cache(print_number, full_text)
+            
+            return full_text
             
         except Exception as e:
             logger.error(f"Błąd OCR dla druku {print_number}: {str(e)}")

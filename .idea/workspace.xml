@@ -4,7 +4,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="87ca935e-c000-45b5-a032-ac386d644bd3" name="Changes" comment="+ 1" />
+    <list default="true" id="87ca935e-c000-45b5-a032-ac386d644bd3" name="Changes" comment="+ 12" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -256,7 +256,15 @@
       <option name="project" value="LOCAL" />
       <updated>1760816373179</updated>
     </task>
-    <option name="localTasksCounter" value="27" />
+    <task id="LOCAL-00027" summary="+ 12">
+      <option name="closed" value="true" />
+      <created>1760818863087</created>
+      <option name="number" value="00027" />
+      <option name="presentableId" value="LOCAL-00027" />
+      <option name="project" value="LOCAL" />
+      <updated>1760818863087</updated>
+    </task>
+    <option name="localTasksCounter" value="28" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -278,6 +286,7 @@
     <MESSAGE value="+ definicja wniosek o odroczenie posiedzenia" />
     <MESSAGE value="+ analiza ai oraz definicje na kartach glosowan" />
     <MESSAGE value="+ 1" />
-    <option name="LAST_COMMIT_MESSAGE" value="+ 1" />
+    <MESSAGE value="+ 12" />
+    <option name="LAST_COMMIT_MESSAGE" value="+ 12" />
   </component>
 </project>

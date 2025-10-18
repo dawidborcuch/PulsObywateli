@@ -135,3 +135,6 @@ dist
 tmp/
 temp/
 
+# OCR Cache
+ocr_cache/
+
