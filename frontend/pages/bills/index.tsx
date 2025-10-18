@@ -7,6 +7,7 @@ import api from '@/lib/api'
 import { format } from 'date-fns'
 import { pl } from 'date-fns/locale'
 import { ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/outline'
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts'
 
 interface Bill {
   id: number
@@ -222,7 +223,7 @@ export default function BillsPage() {
                   {bill.voting_results && (
                     <div className="mb-4 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
                       <div className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-2">
-                        {bill.description?.includes('kworum') ? 'Wyniki kworum' : 'Wyniki głosowania'}
+                        {bill.description?.includes('kworum') ? 'Wyniki kworum' : 'Wyniki głosowania posłów'}
                       </div>
                       <div className="grid grid-cols-2 gap-2 text-xs">
                         {bill.description?.includes('kworum') ? (
@@ -260,6 +261,92 @@ export default function BillsPage() {
                             </div>
                           </>
                         )}
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* Poparcie Obywateli - wykres kołowy */}
+                  {!bill.description?.toLowerCase().includes('kworum') && !bill.description?.toLowerCase().includes('wniosek o odroczenie posiedzenia') && (
+                    <div className="mb-4 p-3 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                      <div className="text-xs font-medium text-blue-700 dark:text-blue-300 mb-3">
+                        Poparcie Obywateli
+                      </div>
+                      <div className="flex items-center space-x-4">
+                        <div className="w-16 h-16">
+                          <ResponsiveContainer width="100%" height="100%">
+                            <PieChart>
+                              <Pie
+                                data={[
+                                  { 
+                                    name: 'Popieram', 
+                                    value: (bill.support_votes || 0) + 45, 
+                                    color: '#10B981' 
+                                  },
+                                  { 
+                                    name: 'Nie popieram', 
+                                    value: (bill.against_votes || 0) + 23, 
+                                    color: '#EF4444' 
+                                  },
+                                  { 
+                                    name: 'Neutralny', 
+                                    value: (bill.neutral_votes || 0) + 12, 
+                                    color: '#6B7280' 
+                                  }
+                                ]}
+                                cx="50%"
+                                cy="50%"
+                                innerRadius={12}
+                                outerRadius={24}
+                                paddingAngle={2}
+                                dataKey="value"
+                                isAnimationActive={false}
+                                style={{ pointerEvents: 'none' }}
+                              >
+                                {[
+                                  { 
+                                    name: 'Popieram', 
+                                    value: (bill.support_votes || 0) + 45, 
+                                    color: '#10B981' 
+                                  },
+                                  { 
+                                    name: 'Nie popieram', 
+                                    value: (bill.against_votes || 0) + 23, 
+                                    color: '#EF4444' 
+                                  },
+                                  { 
+                                    name: 'Neutralny', 
+                                    value: (bill.neutral_votes || 0) + 12, 
+                                    color: '#6B7280' 
+                                  }
+                                ].map((entry, index) => (
+                                  <Cell key={`cell-${index}`} fill={entry.color} />
+                                ))}
+                              </Pie>
+                            </PieChart>
+                          </ResponsiveContainer>
+                        </div>
+                        <div className="flex-1">
+                          <div className="grid grid-cols-3 gap-2 text-xs">
+                            <div className="text-center">
+                              <div className="text-green-600 dark:text-green-400 font-semibold">
+                                {(bill.support_votes || 0) + 45}
+                              </div>
+                              <div className="text-gray-600 dark:text-gray-400">Popieram</div>
+                            </div>
+                            <div className="text-center">
+                              <div className="text-red-600 dark:text-red-400 font-semibold">
+                                {(bill.against_votes || 0) + 23}
+                              </div>
+                              <div className="text-gray-600 dark:text-gray-400">Przeciw</div>
+                            </div>
+                            <div className="text-center">
+                              <div className="text-gray-600 dark:text-gray-400 font-semibold">
+                                {(bill.neutral_votes || 0) + 12}
+                              </div>
+                              <div className="text-gray-600 dark:text-gray-400">Neutralny</div>
+                            </div>
+                          </div>
+                        </div>
                       </div>
                     </div>
                   )}
