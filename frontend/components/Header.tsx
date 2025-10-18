@@ -14,7 +14,7 @@ export default function Header() {
   const router = useRouter()
 
   const navigation = [
-    { name: 'Projekty ustaw', href: '/bills' },
+    { name: 'Głosowania w sejmie', href: '/bills' },
     { name: 'Sondaże', href: '/polls' },
     { name: 'Ranking', href: '/ranking' },
     { name: 'O projekcie', href: '/about' },
