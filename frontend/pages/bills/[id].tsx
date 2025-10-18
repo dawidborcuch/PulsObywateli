@@ -446,10 +446,12 @@ export default function BillDetailPage() {
             )}
           </div>
 
-          {/* Analiza AI */}
-          <div className="mb-8">
-            <AIAnalysis billId={bill.id} billTitle={bill.title} />
-          </div>
+          {/* Analiza AI - tylko dla projektów ustaw, nie dla głosowań kworum */}
+          {!bill.description?.toLowerCase().includes('kworum') && (
+            <div className="mb-8">
+              <AIAnalysis billId={bill.id} billTitle={bill.title} />
+            </div>
+          )}
 
           {/* PDF projektu ustawy */}
           {bill.attachments && bill.attachments.length > 0 && (
