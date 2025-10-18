@@ -548,9 +548,16 @@ export default function BillDetailPage() {
           </div>
 
           {/* PDF-y projektów ustaw */}
-          <div className="mb-8">
-            <VotingProjectPdfs billId={bill.id} />
-          </div>
+          {(() => {
+            // Sprawdź czy w temacie głosowania są numery druków (3-5 cyfrowe liczby)
+            const votingTopic = bill.voting_topic || ''
+            const hasPrintNumbers = /\b\d{3,5}\b/.test(votingTopic)
+            return hasPrintNumbers && (
+              <div className="mb-8">
+                <VotingProjectPdfs billId={bill.id} />
+              </div>
+            )
+          })()}
 
           {/* Pełny tekst projektu */}
           {bill.full_text && (
@@ -645,13 +652,14 @@ export default function BillDetailPage() {
           )}
 
           {/* Głosowanie */}
-          <div className="card p-6 mb-8">
-            <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
-              Głosowanie obywatelskie
-            </h2>
-            <p className="text-gray-600 dark:text-gray-400 mb-6">
-              Wyraź swoje poparcie lub niezadowolenie dla danego projektu ustawy i sprawdź czy Twój poseł ma podobne poglądy
-            </p>
+          {!bill.description?.toLowerCase().includes('kworum') && !bill.description?.toLowerCase().includes('wniosek o odroczenie posiedzenia') && (
+            <div className="card p-6 mb-8">
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
+                Głosowanie obywatelskie
+              </h2>
+              <p className="text-gray-600 dark:text-gray-400 mb-6">
+                Wyraź swoje poparcie lub niezadowolenie dla danego projektu ustawy i sprawdź czy Twój poseł ma podobne poglądy
+              </p>
 
             {/* Wykres kołowy */}
             <div className="mb-8">
@@ -834,7 +842,8 @@ export default function BillDetailPage() {
                 )}
               </div>
             )}
-          </div>
+            </div>
+          )}
 
           {/* Komentarze */}
           <div className="card p-6">
