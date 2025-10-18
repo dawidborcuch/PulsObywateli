@@ -81,15 +81,15 @@ class AIAnalysisService:
             }
     
     def _prepare_text_for_analysis(self, bill):
-        """Przygotowuje tekst do analizy"""
+        """Przygotowuje tekst do analizy z inteligentnym skracaniem"""
         # Najpierw spróbuj pobrać PDF-y projektów ustaw
         project_text = self._get_project_pdfs_text(bill)
         if project_text:
-            return project_text
+            return self._smart_text_shortening(project_text)
         
         # Jeśli nie ma PDF-ów projektów, użyj pełnego tekstu jeśli dostępny
         if bill.full_text and len(bill.full_text) > 100:
-            return bill.full_text[:8000]  # Ogranicz do 8000 znaków
+            return self._smart_text_shortening(bill.full_text)
         elif bill.description and len(bill.description) > 50:
             return bill.description
         else:
@@ -294,6 +294,81 @@ class AIAnalysisService:
         except Exception as e:
             logger.error(f"Błąd OCR dla druku {print_number}: {str(e)}")
             return None
+    
+    def _smart_text_shortening(self, text, max_length=8000):
+        """Inteligentne skracanie tekstu zachowując kluczowe fragmenty"""
+        if len(text) <= max_length:
+            return text
+        
+        # 1. Znajdź kluczowe sekcje dokumentu prawniczego
+        key_sections = self._extract_key_sections(text)
+        
+        # 2. Jeśli kluczowe sekcje są wystarczające, użyj ich
+        if len(key_sections) <= max_length:
+            return key_sections
+        
+        # 3. W przeciwnym razie użyj proporcjonalnego skracania
+        return self._proportional_shortening(text, max_length)
+    
+    def _extract_key_sections(self, text):
+        """Wyciąga kluczowe sekcje dokumentu prawniczego"""
+        import re
+        
+        key_sections = []
+        
+        # Wzorce kluczowych sekcji w dokumentach prawniczych
+        patterns = [
+            r'(?i)(preambuła|wstęp|uzasadnienie).*?(?=\n\n|\n[A-ZĄĆĘŁŃÓŚŹŻ])',
+            r'(?i)(art\.|artykuł|§|paragraf).*?(?=\n\n|\n[A-ZĄĆĘŁŃÓŚŹŻ])',
+            r'(?i)(zmiany|nowe przepisy).*?(?=\n\n|\n[A-ZĄĆĘŁŃÓŚŹŻ])',
+            r'(?i)(przepisy przejściowe|przepisy końcowe).*?(?=\n\n|\n[A-ZĄĆĘŁŃÓŚŹŻ])',
+            r'(?i)(załącznik|aneks).*?(?=\n\n|\n[A-ZĄĆĘŁŃÓŚŹŻ])',
+        ]
+        
+        for pattern in patterns:
+            matches = re.findall(pattern, text, re.DOTALL)
+            key_sections.extend(matches)
+        
+        # Jeśli nie znaleziono kluczowych sekcji, użyj początku dokumentu
+        if not key_sections:
+            return text[:4000] + "\n\n[... tekst skrócony ...]"
+        
+        # Połącz kluczowe sekcje
+        combined = '\n\n'.join(key_sections[:5])  # Maksymalnie 5 sekcji
+        
+        return combined[:8000]  # Ogranicz do 8000 znaków
+    
+    def _proportional_shortening(self, text, max_length):
+        """Proporcjonalne skracanie zachowując strukturę"""
+        # Podziel tekst na akapity
+        paragraphs = text.split('\n\n')
+        
+        if not paragraphs:
+            return text[:max_length]
+        
+        # Oblicz ile akapitów możemy zachować
+        target_length = max_length - 200  # Zostaw miejsce na podsumowanie
+        current_length = 0
+        selected_paragraphs = []
+        
+        for paragraph in paragraphs:
+            if current_length + len(paragraph) <= target_length:
+                selected_paragraphs.append(paragraph)
+                current_length += len(paragraph)
+            else:
+                # Dodaj skrócony ostatni akapit
+                remaining = target_length - current_length
+                if remaining > 100:
+                    selected_paragraphs.append(paragraph[:remaining] + "...")
+                break
+        
+        result = '\n\n'.join(selected_paragraphs)
+        
+        # Dodaj informację o skróceniu
+        if len(text) > max_length:
+            result += f"\n\n[TEKST SKRÓCONY - oryginalnie {len(text)} znaków]"
+        
+        return result
     
     def _create_analysis_prompt(self, text, title):
         """Tworzy prompt dla OpenAI"""
