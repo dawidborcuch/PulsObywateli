@@ -646,9 +646,12 @@ export default function BillDetailPage() {
 
           {/* Głosowanie */}
           <div className="card p-6 mb-8">
-            <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-6">
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
               Głosowanie obywatelskie
             </h2>
+            <p className="text-gray-600 dark:text-gray-400 mb-6">
+              Wyraź swoje poparcie lub niezadowolenie dla danego projektu ustawy i sprawdź czy Twój poseł ma podobne poglądy
+            </p>
 
             {/* Wykres kołowy */}
             <div className="mb-8">
