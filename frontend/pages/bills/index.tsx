@@ -247,6 +247,63 @@ export default function BillsPage() {
                     {bill.description}
                   </p>
                   
+                  {/* Najważniejsze zmiany wg. AI - tylko dla głosowań z analizą AI */}
+                  {bill.ai_analysis && 
+                   !bill.description?.toLowerCase().includes('kworum') && 
+                   !bill.description?.toLowerCase().includes('wniosek o odroczenie posiedzenia') && (
+                    <div className="mb-4 p-3 bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20 border border-purple-200 dark:border-purple-800 rounded-lg">
+                      <div className="flex items-center mb-2">
+                        <div className="w-6 h-6 bg-purple-100 dark:bg-purple-800 rounded-full flex items-center justify-center mr-2">
+                          <span className="text-purple-600 dark:text-purple-400 text-xs font-semibold">AI</span>
+                        </div>
+                        <h4 className="text-sm font-semibold text-purple-900 dark:text-purple-100">
+                          Najważniejsze zmiany wg. AI
+                        </h4>
+                      </div>
+                      <p className="text-xs text-purple-800 dark:text-purple-200 leading-relaxed">
+                        {bill.ai_analysis.changes}
+                      </p>
+                    </div>
+                  )}
+                  
+                  {/* Definicja dla głosowań kworum */}
+                  {bill.description?.toLowerCase().includes('kworum') && (
+                    <div className="mb-4 p-3 bg-gradient-to-r from-blue-50 to-cyan-50 dark:from-blue-900/20 dark:to-cyan-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                      <div className="flex items-center mb-2">
+                        <div className="w-6 h-6 bg-blue-100 dark:bg-blue-800 rounded-full flex items-center justify-center mr-2">
+                          <span className="text-blue-600 dark:text-blue-400 text-xs font-semibold">?</span>
+                        </div>
+                        <h4 className="text-sm font-semibold text-blue-900 dark:text-blue-100">
+                          Co to jest „głosowanie kworum"?
+                        </h4>
+                      </div>
+                      <p className="text-xs text-blue-800 dark:text-blue-200 leading-relaxed">
+                        Głosowanie kworum to techniczne głosowanie w Sejmie, które sprawdza, ilu posłów jest obecnych na sali i może głosować. 
+                        Nie dotyczy żadnej ustawy ani decyzji politycznej — jego jedynym celem jest policzenie obecnych posłów, 
+                        żeby upewnić się, że Sejm może legalnie głosować nad kolejnymi punktami obrad.
+                      </p>
+                    </div>
+                  )}
+                  
+                  {/* Definicja dla wniosków o odroczenie posiedzenia */}
+                  {bill.description?.toLowerCase().includes('wniosek o odroczenie posiedzenia') && (
+                    <div className="mb-4 p-3 bg-gradient-to-r from-orange-50 to-amber-50 dark:from-orange-900/20 dark:to-amber-900/20 border border-orange-200 dark:border-orange-800 rounded-lg">
+                      <div className="flex items-center mb-2">
+                        <div className="w-6 h-6 bg-orange-100 dark:bg-orange-800 rounded-full flex items-center justify-center mr-2">
+                          <span className="text-orange-600 dark:text-orange-400 text-xs font-semibold">?</span>
+                        </div>
+                        <h4 className="text-sm font-semibold text-orange-900 dark:text-orange-100">
+                          Co to jest „wniosek o odroczenie posiedzenia"?
+                        </h4>
+                      </div>
+                      <p className="text-xs text-orange-800 dark:text-orange-200 leading-relaxed">
+                        Wniosek o odroczenie posiedzenia to propozycja przerwania obrad Sejmu i przełożenia ich na inny termin. 
+                        Taki wniosek może złożyć poseł, klub parlamentarny lub marszałek Sejmu, gdy uznają, że obrady nie mogą 
+                        lub nie powinny być kontynuowane w danym momencie.
+                      </p>
+                    </div>
+                  )}
+                  
                   {/* Wyniki głosowania */}
                   {bill.voting_results && (
                     <div className="mb-4 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
