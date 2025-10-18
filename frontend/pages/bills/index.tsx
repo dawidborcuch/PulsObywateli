@@ -222,7 +222,7 @@ export default function BillsPage() {
                   {/* Wyniki głosowania */}
                   {bill.voting_results && (
                     <div className="mb-4 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                      <div className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      <div className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-3">
                         {bill.description?.includes('kworum') ? 'Wyniki kworum' : 'Wyniki głosowania posłów'}
                       </div>
                       <div className="grid grid-cols-2 gap-2 text-xs">
