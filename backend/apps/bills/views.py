@@ -7,10 +7,10 @@ from django.utils import timezone
 from datetime import timedelta
 import re
 
-from .models import Bill, BillVote, BillUpdate
+from .models import Bill, BillVote, BillUpdate, ClubColor
 from .serializers import (
     BillSerializer, BillVoteSerializer, BillUpdateSerializer, 
-    BillCreateSerializer, BillStatsSerializer
+    BillCreateSerializer, BillStatsSerializer, ClubColorSerializer
 )
 from .services import AIAnalysisService
 
@@ -524,4 +524,27 @@ def download_print_pdfs(print_number):
     except Exception as e:
         print(f"Błąd pobierania druku {print_number}: {str(e)}")
         return []
+
+
+class ClubColorListView(generics.ListCreateAPIView):
+    """Lista i tworzenie kolorów klubów"""
+    queryset = ClubColor.objects.all()
+    serializer_class = ClubColorSerializer
+    permission_classes = [permissions.IsAdminUser]
+
+
+class ClubColorDetailView(generics.RetrieveUpdateDestroyAPIView):
+    """Szczegóły, edycja i usuwanie kolorów klubów"""
+    queryset = ClubColor.objects.all()
+    serializer_class = ClubColorSerializer
+    permission_classes = [permissions.IsAdminUser]
+
+
+@api_view(['GET'])
+@permission_classes([permissions.AllowAny])
+def get_club_colors(request):
+    """Pobiera aktywne kolory klubów dla frontendu"""
+    colors = ClubColor.objects.filter(is_active=True)
+    serializer = ClubColorSerializer(colors, many=True)
+    return Response(serializer.data)
 

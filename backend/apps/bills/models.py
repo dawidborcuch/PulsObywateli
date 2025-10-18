@@ -196,3 +196,21 @@ class BillUpdate(models.Model):
     
     def __str__(self):
         return f"{self.bill.number}: {self.old_status} → {self.new_status}"
+
+
+class ClubColor(models.Model):
+    """Model do zarządzania kolorami klubów parlamentarnych"""
+    club_name = models.CharField(max_length=200, unique=True, verbose_name="Nazwa klubu")
+    color_hex = models.CharField(max_length=7, verbose_name="Kolor (HEX)", help_text="Format: #RRGGBB")
+    color_name = models.CharField(max_length=100, blank=True, verbose_name="Nazwa koloru", help_text="Np. Czerwony, Niebieski")
+    is_active = models.BooleanField(default=True, verbose_name="Aktywny")
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Data utworzenia")
+    updated_at = models.DateTimeField(auto_now=True, verbose_name="Data aktualizacji")
+    
+    class Meta:
+        verbose_name = "Kolor klubu"
+        verbose_name_plural = "Kolory klubów"
+        ordering = ['club_name']
+    
+    def __str__(self):
+        return f"{self.club_name} - {self.color_hex}"

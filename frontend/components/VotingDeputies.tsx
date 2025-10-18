@@ -1,6 +1,7 @@
 import { useQuery } from 'react-query'
 import api from '@/lib/api'
-import { UserGroupIcon } from '@heroicons/react/24/outline'
+import { UserGroupIcon, ChevronDownIcon, ChevronUpIcon } from '@heroicons/react/24/outline'
+import { useState } from 'react'
 
 interface Deputy {
   party: string
@@ -14,6 +15,8 @@ interface VotingDeputiesProps {
 }
 
 export default function VotingDeputies({ billId }: VotingDeputiesProps) {
+  const [isExpanded, setIsExpanded] = useState(false)
+  
   const { data, isLoading, error } = useQuery(
     ['voting-pdf-data', billId],
     async () => {
@@ -104,39 +107,51 @@ export default function VotingDeputies({ billId }: VotingDeputiesProps) {
   return (
     <div className="mt-4">
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-          Głosy posłów ({data.total_count})
-        </h3>
+        <button
+          onClick={() => setIsExpanded(!isExpanded)}
+          className="flex items-center space-x-2 text-left hover:bg-gray-50 dark:hover:bg-gray-800 p-2 rounded-lg transition-colors"
+        >
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+            Głosy posłów ({data.total_count})
+          </h3>
+          {isExpanded ? (
+            <ChevronUpIcon className="h-5 w-5 text-gray-500" />
+          ) : (
+            <ChevronDownIcon className="h-5 w-5 text-gray-500" />
+          )}
+        </button>
       </div>
       
-      <div className="space-y-6">
-        {Object.entries(sortedDeputiesByParty).map(([party, deputies]) => (
-          <div key={party} className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
-            <div className="bg-gray-50 dark:bg-gray-800 px-4 py-3 border-b border-gray-200 dark:border-gray-700">
-              <h4 className="font-semibold text-gray-900 dark:text-white">{party}</h4>
-              <p className="text-sm text-gray-600 dark:text-gray-400">
-                {deputies.length} posłów
-              </p>
-            </div>
-            <div className="max-h-64 overflow-y-auto">
-              <div className="divide-y divide-gray-200 dark:divide-gray-700">
-                {deputies.map((deputy, index) => (
-                  <div key={index} className="px-4 py-3 flex items-center justify-between">
-                    <div className="flex-1">
-                      <span className="text-sm font-medium text-gray-900 dark:text-white">
-                        {deputy.first_name} {deputy.last_name}
+      {isExpanded && (
+        <div className="space-y-6">
+          {Object.entries(sortedDeputiesByParty).map(([party, deputies]) => (
+            <div key={party} className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
+              <div className="bg-gray-50 dark:bg-gray-800 px-4 py-3 border-b border-gray-200 dark:border-gray-700">
+                <h4 className="font-semibold text-gray-900 dark:text-white">{party}</h4>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  {deputies.length} posłów
+                </p>
+              </div>
+              <div className="max-h-64 overflow-y-auto">
+                <div className="divide-y divide-gray-200 dark:divide-gray-700">
+                  {deputies.map((deputy, index) => (
+                    <div key={index} className="px-4 py-3 flex items-center justify-between">
+                      <div className="flex-1">
+                        <span className="text-sm font-medium text-gray-900 dark:text-white">
+                          {deputy.first_name} {deputy.last_name}
+                        </span>
+                      </div>
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getVoteColor(deputy.vote)}`}>
+                        {getVoteText(deputy.vote)}
                       </span>
                     </div>
-                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getVoteColor(deputy.vote)}`}>
-                      {getVoteText(deputy.vote)}
-                    </span>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
             </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
     </div>
   )
 }

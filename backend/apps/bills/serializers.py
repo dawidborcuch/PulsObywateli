@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Bill, BillVote, BillUpdate
+from .models import Bill, BillVote, ClubColor, BillUpdate
 
 
 class BillSerializer(serializers.ModelSerializer):
@@ -19,7 +19,7 @@ class BillSerializer(serializers.ModelSerializer):
             'neutral_percentage', 'is_active', 'is_featured', 'tags', 'tags_list',
             'project_type', 'data_source', 'sejm_id', 'eli', 'passed',
             'full_text', 'attachments', 'attachment_files', 'ai_analysis', 'ai_analysis_date',
-            'voting_date', 'voting_number', 'session_number', 'voting_topic', 'voting_results',
+            'voting_date', 'voting_number', 'session_number', 'voting_topic', 'voting_results', 'club_results', 'druk_numbers',
             'created_at', 'updated_at', 'user_vote'
         ]
         read_only_fields = ['id', 'created_at', 'updated_at', 'support_votes', 'against_votes', 'neutral_votes', 'total_votes']
@@ -92,4 +92,12 @@ class BillStatsSerializer(serializers.Serializer):
     most_controversial_bill = BillSerializer()
     status_distribution = serializers.DictField()
     recent_bills = BillSerializer(many=True)
+
+
+class ClubColorSerializer(serializers.ModelSerializer):
+    """Serializer do zarządzania kolorami klubów"""
+    
+    class Meta:
+        model = ClubColor
+        fields = ['id', 'club_name', 'color_hex', 'color_name', 'is_active', 'created_at', 'updated_at']
 

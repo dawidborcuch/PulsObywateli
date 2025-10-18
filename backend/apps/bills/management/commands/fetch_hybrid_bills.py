@@ -139,6 +139,156 @@ class Command(BaseCommand):
         
         return bills_data
 
+    def get_club_results_from_pdf(self, pdf_link):
+        """Pobiera dane klubów z PDF-a głosowania"""
+        if not pdf_link:
+            return None
+            
+        try:
+            import requests
+            import pdfplumber
+            import io
+            import re
+            
+            # Pobierz PDF
+            response = requests.get(pdf_link, timeout=30)
+            response.raise_for_status()
+            
+            # Przetwórz PDF
+            deputies = []
+            with pdfplumber.open(io.BytesIO(response.content)) as pdf:
+                for page in pdf.pages:
+                    text = page.extract_text()
+                    if text:
+                        # Parsuj dane posłów
+                        page_deputies = self.parse_deputies_from_text(text)
+                        deputies.extend(page_deputies)
+            
+            # Grupuj według klubów
+            club_results = self.group_deputies_by_club(deputies)
+            return club_results
+            
+        except Exception as e:
+            self.stdout.write(self.style.WARNING(f'Błąd pobierania danych klubów z PDF: {str(e)}'))
+            return None
+
+    def parse_deputies_from_text(self, text):
+        """Parsuje dane posłów z tekstu PDF"""
+        deputies = []
+        current_party = None
+        
+        lines = text.split('\n')
+        
+        for line in lines:
+            line = line.strip()
+            if not line:
+                continue
+                
+            # Sprawdź czy to nazwa partii (np. "PiS(188)", "Konfederacja_KP(3)", "PSL-TD(63)", "niez.(4)")
+            party_match = re.search(r'^([A-ZĄĆĘŁŃÓŚŹŻa-ząćęłńóśźż_.-]+)\([0-9]+\)', line)
+            if party_match:
+                current_party = party_match.group(1).strip()
+                continue
+            
+            # Sprawdź czy to linia z posłami (zawiera skróty głosów)
+            if current_party and any(word in line.lower() for word in ['za', 'pr.', 'wstrzymał', 'ws.', 'ng.', 'nie', 'ob.']):
+                # Podziel linię na poszczególnych posłów
+                words = line.split()
+                i = 0
+                while i < len(words):
+                    if i + 1 < len(words):
+                        # Sprawdź czy to nazwisko i imię (format PDF: NAZWISKO IMIĘ)
+                        if (words[i].isupper() and words[i+1].isupper() and 
+                            i + 2 < len(words)):
+                            
+                            last_name = words[i]  # Pierwsze słowo to zawsze NAZWISKO
+                            first_name = words[i+1]  # Drugie słowo to IMIĘ (może być pierwsze z kilku)
+                            vote_short = words[i+2].lower()
+                            
+                            # Mapuj skróty na pełne nazwy głosów
+                            if vote_short == 'za':
+                                vote = 'ZA'
+                            elif vote_short == 'pr.':
+                                vote = 'PRZECIW'
+                            elif vote_short == 'wstrzymał' or vote_short == 'ws.':
+                                vote = 'WSTRZYMAŁ'
+                            elif vote_short == 'ng.':
+                                vote = 'NIE GŁOSOWAŁ'
+                            elif vote_short == 'ob.':
+                                vote = 'OBECNY'
+                            elif vote_short == 'nie' and i + 3 < len(words) and words[i+3].lower() == 'głosował':
+                                vote = 'NIE GŁOSOWAŁ'
+                                i += 4
+                                deputies.append({
+                                    'party': current_party,
+                                    'first_name': first_name,
+                                    'last_name': last_name,
+                                    'vote': vote
+                                })
+                                continue
+                            else:
+                                i += 1
+                                continue
+                            
+                            deputies.append({
+                                'party': current_party,
+                                'first_name': first_name,
+                                'last_name': last_name,
+                                'vote': vote
+                            })
+                            i += 3
+                        else:
+                            i += 1
+                    else:
+                        i += 1
+        
+        return deputies
+
+    def group_deputies_by_club(self, deputies):
+        """Grupuje posłów według klubów i liczy głosy"""
+        club_data = {}
+        
+        for deputy in deputies:
+            party = deputy['party']
+            vote = deputy['vote']
+            
+            if party not in club_data:
+                club_data[party] = {
+                    'klub': party,
+                    'liczba_czlonkow': 0,
+                    'glosowalo': 0,
+                    'za': 0,
+                    'przeciw': 0,
+                    'wstrzymalo_sie': 0,
+                    'nie_glosowalo': 0,
+                    'obecny': 0,
+                    'deputies': []
+                }
+            
+            club_data[party]['liczba_czlonkow'] += 1
+            club_data[party]['deputies'].append(deputy)
+            
+            # Licz głosy
+            if vote == 'ZA':
+                club_data[party]['za'] += 1
+                club_data[party]['glosowalo'] += 1
+            elif vote == 'PRZECIW':
+                club_data[party]['przeciw'] += 1
+                club_data[party]['glosowalo'] += 1
+            elif vote == 'WSTRZYMAŁ':
+                club_data[party]['wstrzymalo_sie'] += 1
+            elif vote == 'NIE GŁOSOWAŁ':
+                club_data[party]['nie_glosowalo'] += 1
+            elif vote == 'OBECNY':
+                club_data[party]['obecny'] += 1
+        
+        # Konwertuj na listę
+        club_results = []
+        for party, data in club_data.items():
+            club_results.append(data)
+        
+        return club_results
+
     def process_voting_data(self, voting, term, proceeding):
         """
         Przetwarza dane głosowania z API na format projektu ustawy
@@ -202,6 +352,9 @@ class Command(BaseCommand):
                 'majority_type': majority_type
             }
             
+            # Pobierz dane klubów z PDF-a (jeśli dostępny)
+            club_results = self.get_club_results_from_pdf(pdf_link)
+            
             # Przygotuj załączniki (PDF)
             attachments = []
             if pdf_link:
@@ -227,6 +380,7 @@ class Command(BaseCommand):
                 'session_number': str(proceeding),
                 'voting_topic': topic,
                 'voting_results': voting_results,
+                'club_results': club_results,
                 'attachments': attachments if attachments else None,
                 'api_data': voting  # Zapisz pełne dane z API dla przyszłych potrzeb
             }

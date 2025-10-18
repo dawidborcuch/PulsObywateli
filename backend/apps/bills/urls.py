@@ -15,5 +15,8 @@ urlpatterns = [
     path('<int:bill_id>/ai-analysis/', views.get_ai_analysis, name='get-ai-analysis'),
     path('<int:bill_id>/pdf-data/', views.get_voting_pdf_data, name='get-voting-pdf-data'),
     path('<int:bill_id>/project-pdfs/', views.get_voting_project_pdfs, name='get-voting-project-pdfs'),
+    path('club-colors/', views.ClubColorListView.as_view(), name='club-color-list'),
+    path('club-colors/<int:pk>/', views.ClubColorDetailView.as_view(), name='club-color-detail'),
+    path('club-colors/active/', views.get_club_colors, name='get-club-colors'),
 ]
 

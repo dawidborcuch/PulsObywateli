@@ -501,6 +501,12 @@ export default function BillDetailPage() {
             </div>
           )}
 
+
+          {/* Głosowania w Sejmie */}
+          <div className="mb-8">
+            <SejmVotes billId={bill.id} billTitle={bill.title} />
+          </div>
+
           {/* PDF projektu ustawy */}
           {bill.attachments && bill.attachments.length > 0 && (
             <div className="card p-6 mb-8">
@@ -541,11 +547,6 @@ export default function BillDetailPage() {
               <VotingDeputies billId={bill.id} />
             </div>
           )}
-
-          {/* Głosowania w Sejmie */}
-          <div className="mb-8">
-            <SejmVotes billId={bill.id} billTitle={bill.title} />
-          </div>
 
           {/* PDF-y projektów ustaw */}
           {(() => {
