@@ -107,15 +107,15 @@ export default function BillsPage() {
           </div>
 
           {/* Sortowanie */}
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6 mb-8">
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-                Sortowanie
-              </h2>
+          <div className="flex items-center justify-end mb-6">
+            <div className="flex items-center space-x-3">
+              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                Sortuj:
+              </span>
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value)}
-                className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+                className="px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
               >
                 <option value="-session_number,-voting_number">Najnowsze głosowania</option>
                 <option value="session_number,voting_number">Najstarsze głosowania</option>
