@@ -229,23 +229,24 @@ export default function BillsPage() {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {bills?.map((bill) => (
-                <div key={bill.id} className="card p-6 hover:shadow-md transition-shadow duration-200">
-                  {/* Informacja o posiedzeniu */}
-                  {bill.session_number && (
-                    <div className="mb-3">
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
-                        Posiedzenie Sejmu nr {bill.session_number}
-                      </span>
-                    </div>
-                  )}
-                  
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2 line-clamp-2">
-                    {bill.title}
-                  </h3>
-                  
-                  <p className="text-gray-600 dark:text-gray-400 text-sm mb-4 line-clamp-3">
-                    {bill.description}
-                  </p>
+                <div key={bill.id} className="card p-6 hover:shadow-md transition-shadow duration-200 flex flex-col justify-between min-h-[500px]">
+                  <div className="flex-1">
+                    {/* Informacja o posiedzeniu */}
+                    {bill.session_number && (
+                      <div className="mb-3">
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+                          Posiedzenie Sejmu nr {bill.session_number}
+                        </span>
+                      </div>
+                    )}
+                    
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2 line-clamp-2">
+                      {bill.title}
+                    </h3>
+                    
+                    <p className="text-gray-600 dark:text-gray-400 text-sm mb-4 line-clamp-3">
+                      {bill.description}
+                    </p>
                   
                   {/* Najważniejsze zmiany wg. AI - tylko dla głosowań z analizą AI */}
                   {bill.ai_analysis && 
@@ -350,24 +351,28 @@ export default function BillsPage() {
                     </div>
                   )}
                   
-                  <div className="flex items-center justify-end text-sm text-gray-500 dark:text-gray-400 mb-4">
-                    {bill.voting_date ? (
-                      <div className="text-right">
-                        <div className="font-medium">Głosowanie nr {bill.voting_number}</div>
-                        <div className="text-xs">
-                          {format(new Date(bill.voting_date), 'dd MMM yyyy HH:mm', { locale: pl })}
-                        </div>
-                      </div>
-                    ) : (
-                      <span>{format(new Date(bill.submission_date), 'dd MMM yyyy', { locale: pl })}</span>
-                    )}
                   </div>
                   
-                  <Link href={`/bills/${bill.id}`}>
-                    <button className="btn-outline w-full text-center">
-                      Zobacz szczegóły
-                    </button>
-                  </Link>
+                  <div className="mt-auto">
+                    <div className="flex items-center justify-end text-sm text-gray-500 dark:text-gray-400 mb-3">
+                      {bill.voting_date ? (
+                        <div className="text-right">
+                          <div className="font-medium">Głosowanie nr {bill.voting_number}</div>
+                          <div className="text-xs">
+                            {format(new Date(bill.voting_date), 'dd MMM yyyy HH:mm', { locale: pl })}
+                          </div>
+                        </div>
+                      ) : (
+                        <span>{format(new Date(bill.submission_date), 'dd MMM yyyy', { locale: pl })}</span>
+                      )}
+                    </div>
+                    
+                    <Link href={`/bills/${bill.id}`}>
+                      <button className="btn-outline w-full text-center">
+                        Zobacz szczegóły
+                      </button>
+                    </Link>
+                  </div>
                 </div>
               ))}
             </div>

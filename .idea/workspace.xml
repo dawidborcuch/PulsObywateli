@@ -4,7 +4,9 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="87ca935e-c000-45b5-a032-ac386d644bd3" name="Changes" comment="+ definicja głosowanie kworum" />
+    <list default="true" id="87ca935e-c000-45b5-a032-ac386d644bd3" name="Changes" comment="+ analiza ai oraz definicje na kartach glosowan">
+      <change beforePath="$PROJECT_DIR$/frontend/pages/bills/index.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/pages/bills/index.tsx" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -168,7 +170,23 @@
       <option name="project" value="LOCAL" />
       <updated>1760812142973</updated>
     </task>
-    <option name="localTasksCounter" value="16" />
+    <task id="LOCAL-00016" summary="+ definicja wniosek o odroczenie posiedzenia">
+      <option name="closed" value="true" />
+      <created>1760812344200</created>
+      <option name="number" value="00016" />
+      <option name="presentableId" value="LOCAL-00016" />
+      <option name="project" value="LOCAL" />
+      <updated>1760812344200</updated>
+    </task>
+    <task id="LOCAL-00017" summary="+ analiza ai oraz definicje na kartach glosowan">
+      <option name="closed" value="true" />
+      <created>1760812903953</created>
+      <option name="number" value="00017" />
+      <option name="presentableId" value="LOCAL-00017" />
+      <option name="project" value="LOCAL" />
+      <updated>1760812903953</updated>
+    </task>
+    <option name="localTasksCounter" value="18" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -187,6 +205,8 @@
     <MESSAGE value="commit" />
     <MESSAGE value="kworum bez analizy AI" />
     <MESSAGE value="+ definicja głosowanie kworum" />
-    <option name="LAST_COMMIT_MESSAGE" value="+ definicja głosowanie kworum" />
+    <MESSAGE value="+ definicja wniosek o odroczenie posiedzenia" />
+    <MESSAGE value="+ analiza ai oraz definicje na kartach glosowan" />
+    <option name="LAST_COMMIT_MESSAGE" value="+ analiza ai oraz definicje na kartach glosowan" />
   </component>
 </project>
