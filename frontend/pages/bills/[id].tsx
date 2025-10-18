@@ -467,10 +467,34 @@ export default function BillDetailPage() {
                 </div>
               </div>
             )}
+            
+            {/* Informacja o wniosku o odroczenie posiedzenia */}
+            {bill.description?.toLowerCase().includes('wniosek o odroczenie posiedzenia') && (
+              <div className="mt-6 p-4 bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-lg">
+                <div className="flex items-start space-x-3">
+                  <div className="flex-shrink-0">
+                    <div className="w-8 h-8 bg-orange-100 dark:bg-orange-800 rounded-full flex items-center justify-center">
+                      <span className="text-orange-600 dark:text-orange-400 text-sm font-semibold">?</span>
+                    </div>
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="text-sm font-semibold text-orange-900 dark:text-orange-100 mb-2">
+                      Co to jest „wniosek o odroczenie posiedzenia"?
+                    </h3>
+                    <p className="text-sm text-orange-800 dark:text-orange-200 leading-relaxed">
+                      Wniosek o odroczenie posiedzenia to propozycja przerwania obrad Sejmu i przełożenia ich na inny termin.
+                      Taki wniosek może złożyć poseł, klub parlamentarny lub marszałek Sejmu, gdy uznają, że obrady nie mogą 
+                      lub nie powinny być kontynuowane w danym momencie.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
-          {/* Analiza AI - tylko dla projektów ustaw, nie dla głosowań kworum */}
-          {!bill.description?.toLowerCase().includes('kworum') && (
+          {/* Analiza AI - tylko dla projektów ustaw, nie dla głosowań kworum ani wniosków o odroczenie */}
+          {!bill.description?.toLowerCase().includes('kworum') && 
+           !bill.description?.toLowerCase().includes('wniosek o odroczenie posiedzenia') && (
             <div className="mb-8">
               <AIAnalysis billId={bill.id} billTitle={bill.title} />
             </div>

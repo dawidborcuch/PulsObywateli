@@ -4,7 +4,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="87ca935e-c000-45b5-a032-ac386d644bd3" name="Changes" comment="commit" />
+    <list default="true" id="87ca935e-c000-45b5-a032-ac386d644bd3" name="Changes" comment="+ definicja głosowanie kworum" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -144,7 +144,31 @@
       <option name="project" value="LOCAL" />
       <updated>1760736756093</updated>
     </task>
-    <option name="localTasksCounter" value="13" />
+    <task id="LOCAL-00013" summary="commit">
+      <option name="closed" value="true" />
+      <created>1760811753317</created>
+      <option name="number" value="00013" />
+      <option name="presentableId" value="LOCAL-00013" />
+      <option name="project" value="LOCAL" />
+      <updated>1760811753317</updated>
+    </task>
+    <task id="LOCAL-00014" summary="kworum bez analizy AI">
+      <option name="closed" value="true" />
+      <created>1760811862349</created>
+      <option name="number" value="00014" />
+      <option name="presentableId" value="LOCAL-00014" />
+      <option name="project" value="LOCAL" />
+      <updated>1760811862349</updated>
+    </task>
+    <task id="LOCAL-00015" summary="+ definicja głosowanie kworum">
+      <option name="closed" value="true" />
+      <created>1760812142973</created>
+      <option name="number" value="00015" />
+      <option name="presentableId" value="LOCAL-00015" />
+      <option name="project" value="LOCAL" />
+      <updated>1760812142973</updated>
+    </task>
+    <option name="localTasksCounter" value="16" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -161,6 +185,8 @@
   <component name="VcsManagerConfiguration">
     <MESSAGE value="init" />
     <MESSAGE value="commit" />
-    <option name="LAST_COMMIT_MESSAGE" value="commit" />
+    <MESSAGE value="kworum bez analizy AI" />
+    <MESSAGE value="+ definicja głosowanie kworum" />
+    <option name="LAST_COMMIT_MESSAGE" value="+ definicja głosowanie kworum" />
   </component>
 </project>
